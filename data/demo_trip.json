@@ -1,0 +1,15 @@
+{
+  "name": "Fall East Coast / Midwest Demo Trip",
+  "description": "Reproducible 15-night, three-city trip used by Demo Mode and the test suite.",
+  "currency": "USD",
+  "budget": 2500,
+  "travelers": 2,
+  "refundable_only": false,
+  "include_estimated_cashback": true,
+  "objective": "lowest_net",
+  "segments": [
+    {"city": "Chicago", "check_in": "2026-11-10", "check_out": "2026-11-15"},
+    {"city": "New York", "check_in": "2026-11-15", "check_out": "2026-11-20"},
+    {"city": "Boston", "check_in": "2026-11-20", "check_out": "2026-11-25"}
+  ]
+}

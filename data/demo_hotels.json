@@ -1,0 +1,98 @@
+[
+  {
+    "hotel_id": "hotel-chi-001",
+    "hotel_name": "Lakeside Grand Chicago",
+    "city": "Chicago",
+    "currency": "USD",
+    "platforms": {
+      "Provider A": {"nightly": 172, "room_type": "Standard King", "refundable": true},
+      "Provider B": {"nightly": 168, "room_type": "Standard King", "refundable": true},
+      "Provider C": {"nightly": 159, "room_type": "Standard King", "refundable": false, "cancellation_policy": "Non-refundable prepaid rate"}
+    }
+  },
+  {
+    "hotel_id": "hotel-chi-002",
+    "hotel_name": "Loop Business Suites",
+    "city": "Chicago",
+    "currency": "USD",
+    "platforms": {
+      "Provider A": {"nightly": 141, "room_type": "Queen Studio", "refundable": true},
+      "Provider B": {"nightly": 136, "room_type": "Queen Studio", "refundable": true},
+      "Provider C": {"nightly": 129, "room_type": "Queen Studio", "refundable": true, "resort_fee": false}
+    }
+  },
+  {
+    "hotel_id": "hotel-chi-003",
+    "hotel_name": "River North Residences",
+    "city": "Chicago",
+    "currency": "USD",
+    "platforms": {
+      "Provider A": {"nightly": 118, "room_type": "Double Double", "refundable": true},
+      "Provider C": {"nightly": 112, "room_type": "Double Double", "refundable": false, "cancellation_policy": "Non-refundable"}
+    }
+  },
+  {
+    "hotel_id": "hotel-nyc-001",
+    "hotel_name": "Midtown Tower Hotel",
+    "city": "New York",
+    "currency": "USD",
+    "platforms": {
+      "Provider A": {"nightly": 268, "room_type": "Standard King", "refundable": true},
+      "Provider B": {"nightly": 259, "room_type": "Standard King", "refundable": true},
+      "Provider C": {"nightly": 244, "room_type": "Standard King", "refundable": false, "cancellation_policy": "Non-refundable"}
+    }
+  },
+  {
+    "hotel_id": "hotel-nyc-002",
+    "hotel_name": "Lower East Side Loft",
+    "city": "New York",
+    "currency": "USD",
+    "platforms": {
+      "Provider A": {"nightly": 213, "room_type": "Queen Loft", "refundable": true},
+      "Provider B": {"nightly": 205, "room_type": "Queen Loft", "refundable": true, "resort_fee": false},
+      "Provider C": {"nightly": 198, "room_type": "Queen Loft", "refundable": true}
+    }
+  },
+  {
+    "hotel_id": "hotel-nyc-003",
+    "hotel_name": "Brooklyn Bridgeview Inn",
+    "city": "New York",
+    "currency": "USD",
+    "platforms": {
+      "Provider A": {"nightly": 176, "room_type": "Double", "refundable": true},
+      "Provider C": {"nightly": 164, "room_type": "Double", "refundable": false, "cancellation_policy": "Non-refundable"}
+    }
+  },
+  {
+    "hotel_id": "hotel-bos-001",
+    "hotel_name": "Back Bay Charles Hotel",
+    "city": "Boston",
+    "currency": "USD",
+    "platforms": {
+      "Provider A": {"nightly": 198, "room_type": "Standard King", "refundable": true},
+      "Provider B": {"nightly": 191, "room_type": "Standard King", "refundable": true},
+      "Provider C": {"nightly": 182, "room_type": "Standard King", "refundable": true}
+    }
+  },
+  {
+    "hotel_id": "hotel-bos-002",
+    "hotel_name": "Cambridge Kendall Suites",
+    "city": "Boston",
+    "currency": "USD",
+    "platforms": {
+      "Provider A": {"nightly": 154, "room_type": "Queen Suite", "refundable": true},
+      "Provider B": {"nightly": 148, "room_type": "Queen Suite", "refundable": true, "resort_fee": false},
+      "Provider C": {"nightly": 139, "room_type": "Queen Suite", "refundable": false, "cancellation_policy": "Non-refundable"}
+    }
+  },
+  {
+    "hotel_id": "hotel-bos-003",
+    "hotel_name": "Seaport Harbor Inn",
+    "city": "Boston",
+    "currency": "USD",
+    "platforms": {
+      "Provider A": {"nightly": 131, "room_type": "Double", "refundable": true},
+      "Provider C": {"nightly": 124, "room_type": "Double", "refundable": true}
+    }
+  }
+]

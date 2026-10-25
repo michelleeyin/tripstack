@@ -1,0 +1,96 @@
+{
+  "description": "Ten promotion texts with hand-labelled ground truth, used to compare the Gemma parser against the rule-based fallback. Labels were written by hand before running either parser.",
+  "labelled_by": "manual",
+  "cases": [
+    {
+      "id": "c01",
+      "text": "Earn 8% cashback on eligible hotel bookings. Maximum cashback is $30. Not valid with third-party coupon codes. Taxes and fees are excluded.",
+      "expected": {
+        "type": "cashback", "rate": 0.08, "fixed_amount": null, "cap": 30,
+        "minimum_spend": null, "taxes_eligible": false, "stackable": false,
+        "valid_until": null, "requires_verification": false
+      }
+    },
+    {
+      "id": "c02",
+      "text": "Save $25 instantly on stays of $200 or more. Valid through 2026-12-31. Can be combined with cashback offers.",
+      "expected": {
+        "type": "instant_discount", "rate": null, "fixed_amount": 25, "cap": null,
+        "minimum_spend": 200, "taxes_eligible": false, "stackable": true,
+        "valid_until": "2026-12-31", "requires_verification": false
+      }
+    },
+    {
+      "id": "c03",
+      "text": "Get 5% back on hotel stays, up to $50 per stay. Minimum purchase $150. Excludes taxes and fees. Stackable with site promotions.",
+      "expected": {
+        "type": "cashback", "rate": 0.05, "fixed_amount": null, "cap": 50,
+        "minimum_spend": 150, "taxes_eligible": false, "stackable": true,
+        "valid_until": null, "requires_verification": false
+      }
+    },
+    {
+      "id": "c04",
+      "text": "Use code TRAVEL15 for 15% off your booking. Cannot be combined with other offers. Expires 2026-11-30.",
+      "expected": {
+        "type": "coupon", "rate": 0.15, "fixed_amount": null, "cap": null,
+        "minimum_spend": null, "taxes_eligible": false, "stackable": false,
+        "valid_until": "2026-11-30", "requires_verification": false
+      }
+    },
+    {
+      "id": "c05",
+      "text": "$40 off when you spend $300 or more. Taxes and fees are excluded from the discount.",
+      "expected": {
+        "type": "instant_discount", "rate": null, "fixed_amount": 40, "cap": null,
+        "minimum_spend": 300, "taxes_eligible": false, "stackable": false,
+        "valid_until": null, "requires_verification": false
+      }
+    },
+    {
+      "id": "c06",
+      "text": "Members earn 10% cashback with no cap. Valid on room rate only; taxes and resort fees do not qualify.",
+      "expected": {
+        "type": "cashback", "rate": 0.10, "fixed_amount": null, "cap": null,
+        "minimum_spend": null, "taxes_eligible": false, "stackable": false,
+        "valid_until": null, "requires_verification": false
+      }
+    },
+    {
+      "id": "c07",
+      "text": "Earn 3% cashback on the total including taxes. Maximum $20 per booking.",
+      "expected": {
+        "type": "cashback", "rate": 0.03, "fixed_amount": null, "cap": 20,
+        "minimum_spend": null, "taxes_eligible": true, "stackable": false,
+        "valid_until": null, "requires_verification": false
+      }
+    },
+    {
+      "id": "c08",
+      "text": "Special member pricing may apply at checkout. Terms shown after login.",
+      "expected": {
+        "type": "cashback", "rate": null, "fixed_amount": null, "cap": null,
+        "minimum_spend": null, "taxes_eligible": false, "stackable": false,
+        "valid_until": null, "requires_verification": true
+      }
+    },
+    {
+      "id": "c09",
+      "text": "Book today and receive a $75 statement credit on hotel stays of $500 or more. Offer ends 03/15/2027. Not stackable with other promotions.",
+      "expected": {
+        "type": "cashback", "rate": null, "fixed_amount": 75, "cap": null,
+        "minimum_spend": 500, "taxes_eligible": false, "stackable": false,
+        "valid_until": "2027-03-15", "requires_verification": false
+      }
+    },
+    {
+      "id": "c10",
+      "text": "12% off weekend stays. Max discount $60. Cannot be combined with cashback.",
+      "expected": {
+        "type": "instant_discount", "rate": 0.12, "fixed_amount": null, "cap": 60,
+        "minimum_spend": null, "taxes_eligible": false, "stackable": false,
+        "valid_until": null, "requires_verification": false
+      }
+    }
+  ]
+}

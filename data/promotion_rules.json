@@ -1,0 +1,71 @@
+{
+  "disclaimer": "Curated local rules for demonstration. Rates are illustrative and must be verified against each platform before booking. TripStack does not scrape login-protected accounts and does not guarantee cashback payouts.",
+  "retrieved_at": "2026-10-24",
+  "promotions": [
+    {
+      "promotion_id": "promo-a-cashback-8",
+      "platform": "Provider A",
+      "type": "cashback",
+      "rate": 0.08,
+      "cap": 30,
+      "minimum_spend": 100,
+      "taxes_eligible": false,
+      "stackable": false,
+      "valid_until": "2026-12-31",
+      "source_url": "https://example.com/provider-a/cashback",
+      "verification_status": "estimated",
+      "raw_text": "Earn 8% cashback on eligible hotel bookings. Maximum cashback is $30. Not valid with third-party coupon codes. Taxes and fees are excluded.",
+      "notes": "Curated rule; matches the documented Gemma extraction example."
+    },
+    {
+      "promotion_id": "promo-b-cashback-5",
+      "platform": "Provider B",
+      "type": "cashback",
+      "rate": 0.05,
+      "cap": 50,
+      "minimum_spend": 150,
+      "taxes_eligible": false,
+      "stackable": true,
+      "valid_until": "2026-12-31",
+      "source_url": "https://example.com/provider-b/rewards",
+      "verification_status": "estimated",
+      "raw_text": "Members earn 5% back on hotel stays, up to $50 per stay. Can be combined with site promotions. Cashback excludes taxes and fees."
+    },
+    {
+      "promotion_id": "promo-c-instant-25",
+      "platform": "Provider C",
+      "type": "instant_discount",
+      "fixed_amount": 25,
+      "minimum_spend": 200,
+      "taxes_eligible": false,
+      "stackable": false,
+      "valid_until": "2026-12-31",
+      "source_url": "https://example.com/provider-c/promo",
+      "verification_status": "estimated",
+      "raw_text": "Save $25 instantly on stays of $200 or more. Valid through 2026-12-31. Cannot be combined with other coupon codes."
+    },
+    {
+      "promotion_id": "promo-c-cashback-unknown",
+      "platform": "Provider C",
+      "type": "cashback",
+      "raw_text": "Special member pricing may apply at checkout. Terms are shown after login.",
+      "source_url": "https://example.com/provider-c/members",
+      "verification_status": "unknown",
+      "notes": "Terms are behind a login wall and cannot be verified. Left for the AI parser to attempt; expected to remain 'unknown'."
+    },
+    {
+      "promotion_id": "promo-a-expired-12",
+      "platform": "Provider A",
+      "type": "cashback",
+      "rate": 0.12,
+      "cap": 75,
+      "minimum_spend": 100,
+      "taxes_eligible": false,
+      "stackable": false,
+      "valid_until": "2025-12-31",
+      "source_url": "https://example.com/provider-a/archive",
+      "verification_status": "estimated",
+      "notes": "Deliberately expired rule used by tests to prove expiry rejection."
+    }
+  ]
+}
