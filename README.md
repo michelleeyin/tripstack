@@ -6,9 +6,56 @@ TripStack compares upfront payment and estimated cost after cashback. Each
 recommendation includes its price breakdown, promotion conditions and location
 reference. The app does not book rooms or process payments.
 
+## Product walkthrough
+
+The screenshots below use simulated hotel quotes and coordinates. They show the
+working comparison and offer-review flow, not live market prices or verified
+savings. Amadeus integration code is included, but live account access and
+production quote retrieval have not yet been validated.
+
+### Compare the cost of a trip
+
+Recommendations separate upfront payment, estimated cashback and estimated net
+cost. Location preferences and refund filters constrain the available choices;
+over-budget plans are explicitly flagged.
+
+![Three-city demo itinerary with recommended stays, price totals and an over-budget notice](docs/images/results1.png)
+
+### Read promotion terms with Gemma
+
+Paste terms, inspect the extracted conditions, and preview their impact on the
+same hotel quote snapshot. Source evidence is available for review. Applying an
+offer does not verify eligibility or guarantee a payout; model failures are
+labelled and can fall back to the rule parser.
+
+![Gemma offer analysis showing extracted conditions and the before-and-after trip estimate](docs/images/offer.png)
+
+<details>
+<summary>Trip setup and calculation settings</summary>
+
+Plan multiple destinations with a downtown radius or a custom coordinate
+reference. A place name is a label; it is not automatically geocoded.
+
+![Multi-city trip setup with location preferences and additional options](docs/images/home.png)
+
+Inspect alternative offers and model settings. A model being installed does not
+establish that an inference check has succeeded.
+
+![Alternative-offer table and local model diagnostics settings](docs/images/results2.png)
+
+</details>
+
 ## Run locally
 
-From the project directory, with Python 3.11 or later:
+Install Python 3.11 or later and Git, then clone the repository. Keep the
+checkout directory named `tripstack`, as the code imports that package name.
+
+```bash
+git clone https://github.com/michelleeyin/tripstack.git tripstack
+cd tripstack
+```
+
+Create an isolated environment and start the app:
 
 ```bash
 python3 -m venv .venv
@@ -33,8 +80,13 @@ Gemma runs through Ollama. On macOS, install and start it with:
 
 ```bash
 brew install ollama
-ollama pull gemma:2b
 ollama serve
+```
+
+Keep that terminal running. In another terminal:
+
+```bash
+ollama pull gemma:2b
 ```
 
 `gemma:2b` is the default model. Set `OLLAMA_MODEL` to use another installed
