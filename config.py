@@ -65,7 +65,7 @@ def get_settings() -> Settings:
         ).strip(),
         ollama_host=os.getenv("OLLAMA_HOST", "http://localhost:11434").strip(),
         ollama_model=os.getenv("OLLAMA_MODEL", "gemma:2b").strip(),
-        ollama_timeout_s=_env_float("OLLAMA_TIMEOUT_S", 25.0),
+        ollama_timeout_s=_env_float("OLLAMA_TIMEOUT_S", 90.0),
         use_ai_parser=_env_bool("TRIPSTACK_USE_AI_PARSER", True),
         http_timeout_s=_env_float("TRIPSTACK_HTTP_TIMEOUT_S", 20.0),
         demo_seed=int(os.getenv("TRIPSTACK_DEMO_SEED", "7")),

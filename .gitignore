@@ -4,6 +4,19 @@ __pycache__/
 venv/
 .env
 .pytest_cache/
-.streamlit/
+# Share the visual theme, but keep local Streamlit secrets untracked.
+.streamlit/*
+!.streamlit/config.toml
 tripstack_report.json
 .DS_Store
+
+# Local credentials, generated reports and editor files.
+.env.*
+!.env.example
+*.pem
+*.key
+*.log
+.coverage
+htmlcov/
+.vscode/
+.idea/

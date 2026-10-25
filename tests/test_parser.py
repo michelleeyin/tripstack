@@ -196,7 +196,7 @@ def test_hybrid_strategy_takes_numbers_from_rules_and_semantics_from_the_model()
     assert trace.method == "hybrid"
     assert float(promo.rate) == 0.08          # from the rule parser
     assert float(promo.cap) == 30.0           # from the rule parser
-    assert promo.stackable is True            # from the model
+    assert promo.stackable is False           # explicit exclusions override the model
     assert any("using the rule-parser value" in w for w in trace.warnings)
 
 

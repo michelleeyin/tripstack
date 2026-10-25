@@ -1,14 +1,14 @@
 """Natural-language promotion parsing (Gemma via Ollama + safe fallback).
 
-The AI layer is advisory only. Its output is validated by Pydantic before it
-can reach the pricing engine, and anything it cannot confirm is marked
-``requires_verification`` so the eligibility validator refuses to count it as
-a saving.
+Parsed fields are validated before pricing. Unresolved conditions are marked
+``requires_verification`` and excluded from reported savings.
 """
 
 from __future__ import annotations
 
 import re
+import time
+import math
 from dataclasses import dataclass, field
 from datetime import date
 from decimal import Decimal
@@ -47,6 +47,13 @@ class ExtractionDraft(BaseModel):
     requires_verification: bool | None = None
     notes: str | None = None
 
+    @field_validator("fixed_amount", "cap", "minimum_spend")
+    @classmethod
+    def _money_range(cls, value):
+        if value is not None and (not math.isfinite(value) or value < 0):
+            raise ValueError("Amounts must be finite and non-negative")
+        return value
+
     @field_validator("rate")
     @classmethod
     def _rate_range(cls, value: float | None) -> float | None:
@@ -55,7 +62,7 @@ class ExtractionDraft(BaseModel):
         # Accept "8" meaning 8% as well as "0.08".
         if value > 1:
             value = value / 100
-        if value < 0 or value > 1:
+        if not math.isfinite(value) or value < 0 or value > 1:
             raise ValueError("rate out of range")
         return value
 
@@ -69,6 +76,10 @@ class ParseTrace:
     model: str = ""
     raw_output: dict[str, Any] = field(default_factory=dict)
     warnings: list[str] = field(default_factory=list)
+    elapsed_ms: int = 0
+    metrics: dict[str, Any] = field(default_factory=dict)
+    evidence: dict[str, str] = field(default_factory=dict)
+    fallback_reason: str = ""
 
 
 NUMERIC_FIELDS = ("rate", "fixed_amount", "cap", "minimum_spend")
@@ -102,6 +113,7 @@ def parse_promotion_terms(
 
     Never raises on bad model output.
     """
+    started = time.perf_counter()
     trace = ParseTrace(promotion_id=promotion_id)
     draft: ExtractionDraft | None = None
 
@@ -113,7 +125,9 @@ def parse_promotion_terms(
             draft = ExtractionDraft.model_validate(raw)
             trace.model = gemma.model
             trace.raw_output = raw
+            trace.metrics = dict(getattr(gemma, "last_metrics", {}))
         except (GemmaUnavailable, ValidationError, ValueError) as exc:
+            trace.fallback_reason = str(exc)
             trace.warnings.append(f"AI extraction unavailable or invalid: {exc}")
             draft = None
 
@@ -125,6 +139,7 @@ def parse_promotion_terms(
         promo = _draft_to_promotion(
             merged, promotion_id, platform, source_url, terms, trace
         )
+        _finish_trace(promo, trace, terms, started)
         return promo, trace
 
     if draft is None:
@@ -140,7 +155,28 @@ def parse_promotion_terms(
         trace.method = "gemma"
 
     promo = _draft_to_promotion(draft, promotion_id, platform, source_url, terms, trace)
+    _finish_trace(promo, trace, terms, started)
     return promo, trace
+
+
+def _finish_trace(promo, trace, terms, started):
+    trace.elapsed_ms = round((time.perf_counter() - started) * 1000)
+    for key in NUMERIC_FIELDS:
+        value = getattr(promo, key)
+        if value is None:
+            continue
+        pattern = _PCT_RE if key == "rate" else _MONEY_RE
+        target = float(value * 100) if key == "rate" else float(value)
+        for match in pattern.finditer(terms):
+            if abs(float(match.group(1).replace(",", "")) - target) < 0.00001:
+                trace.evidence[key] = terms[max(0, match.start()-40):min(len(terms), match.end()+60)]
+                break
+    for key, words in {"stackable": r"combin|stack|coupon", "taxes_eligible": r"tax|fee",
+                       "valid_until": r"valid|expir|through|until"}.items():
+        for sentence in re.split(r"(?<=[.!?])\s+|\n", terms):
+            if re.search(words, sentence, re.IGNORECASE):
+                trace.evidence[key] = sentence
+                break
 
 
 def _merge_drafts(
@@ -149,8 +185,8 @@ def _merge_drafts(
     """Numbers from rules, meaning from the model, conflicts flagged.
 
     Numeric fields come from the rule parser *only*. Every value it produces is
-    copied out of the source text, so it cannot hallucinate; when the rules
-    find nothing, the field stays null rather than accepting a model number.
+    copied from source matches. When the rules find nothing, the field stays
+    null rather than accepting a model number.
     Measured: letting model numbers fill the gaps cost ~3 points of accuracy
     (see docs/parser-benchmark.md), typically by reusing a figure that belongs
     to a different field.
@@ -171,8 +207,13 @@ def _merge_drafts(
 
     for field in SEMANTIC_FIELDS:
         value = getattr(ai, field)
-        if value is None:
-            value = getattr(rules, field)
+        rule_value = getattr(rules, field)
+        if field in {"stackable", "taxes_eligible"} and rule_value is not None:
+            if value is not None and value != rule_value:
+                trace.warnings.append(f"Explicit source condition overrides model {field}={value}")
+            value = rule_value
+        elif value is None:
+            value = rule_value
         merged[field] = value
 
     merged["notes"] = f"hybrid: {ai.notes or 'no model note'}"
@@ -254,6 +295,15 @@ def _draft_to_promotion(
         trace.warnings.append(f"Unknown promotion_type '{ptype}'; treated as cashback")
         ptype = "cashback"
 
+    source_fields = heuristic_extract(terms)
+    role_conflict = False
+    for key in ("fixed_amount", "cap", "minimum_spend"):
+        source_value = source_fields[key]
+        model_value = getattr(draft, key)
+        if source_value is not None and (model_value is None or abs(source_value - model_value) > .005):
+            role_conflict = True
+            trace.warnings.append(f"{key} conflicts with its source role; review required")
+
     valid_until = _parse_date(draft.valid_until)
 
     rate = to_rate(draft.rate) if draft.rate is not None else None
@@ -268,7 +318,17 @@ def _draft_to_promotion(
         fixed = Decimal("0.00")
         ptype = "cashback"
 
-    needs_check = bool(draft.requires_verification) or trace.method == "failed"
+    # Positive semantics cannot override explicit source exclusions in AI mode either.
+    rules = heuristic_extract(terms)
+    for key in ("stackable", "taxes_eligible"):
+        if rules[key] is not None and getattr(draft, key) != rules[key]:
+            trace.warnings.append(f"Explicit source condition used for {key}")
+            object.__setattr__(draft, key, rules[key])
+    from .prompts import MAX_TERMS_CHARS
+    ambiguous = len(set(_PCT_RE.findall(terms))) > 1 or len(terms) > MAX_TERMS_CHARS
+    if ambiguous:
+        trace.warnings.append("Multiple rates or truncated terms require manual review; excluded from savings")
+    needs_check = bool(draft.requires_verification) or trace.method == "failed" or ambiguous or role_conflict
 
     return Promotion(
         promotion_id=promotion_id,

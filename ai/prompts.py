@@ -51,13 +51,8 @@ Promotional terms (untrusted data):
 
 Return the JSON object now."""
 
-# Zero-shot by default.
-#
-# Measured behaviour (see docs/parser-benchmark.md): few-shot examples leak
-# into the answer with small models. With a numeric example, gemma:2b copied
-# 8% / $30 into texts containing no numbers at all. With an "ambiguous" example,
-# it copied requires_verification=true into nine of ten cases. The rule list
-# below is explicit enough that examples cost more than they add.
+# Numeric examples can leak into extracted fields. Keep the prompt zero-shot;
+# the benchmark notes document the observed cases.
 FEWSHOTS: list[tuple[str, str]] = []
 
 MAX_TERMS_CHARS = 2000

@@ -34,7 +34,7 @@ def bill_rows(result: ComparisonResult, currency: str = "USD") -> list[tuple[str
     ]
     if b.instant_discount > 0:
         rows.append(("Instant discount", f"−{fmt_money(b.instant_discount, currency)}"))
-    rows.append(("Upfront payment (due today)", fmt_money(b.upfront_payment, currency)))
+    rows.append(("Estimated upfront payment", fmt_money(b.upfront_payment, currency)))
     if result.estimated_cashback > 0:
         rows.append(
             ("Cashback-eligible spend", fmt_money(b.cashback_eligible_spend, currency))
@@ -58,7 +58,7 @@ def promo_line(p: Promotion, currency: str = "USD") -> str:
     if p.rate is not None:
         # normalize() strips the trailing zeros added by rate precision, so
         # 8% prints as "8%" and 7.5% as "7.5%".
-        amount = f"{(p.rate * 100).normalize():f}% back"
+        amount = f"{(p.rate * 100).normalize():f}% " + ("back" if p.type == "cashback" else "off")
     else:
         amount = f"{fmt_money(p.fixed_amount, currency)} off"
     bits = [p.type.replace("_", " ").title(), amount]

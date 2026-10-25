@@ -1,4 +1,4 @@
-"""AI layer — Gemma (Ollama) promotion-term extraction with safe fallbacks."""
+"""Promotion extraction client and parser."""
 
 from .gemma_client import GemmaClient, GemmaUnavailable
 from .promotion_parser import ParseTrace, enrich_promotions, parse_promotion_terms

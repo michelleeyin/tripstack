@@ -1,24 +1,22 @@
 # Contributing to TripStack
 
-Thanks for helping build an honest travel-savings agent. This project values
-**verifiable numbers over impressive-sounding ones** — that principle should
-survive every pull request.
+Changes should preserve pricing correctness, source information and clear
+separation between demo data and live provider responses.
 
 ## Setup
 
 ```bash
 python -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
-cp .env.example .env
-python -m pytest -q          # 44 tests, must pass
-streamlit run app.py         # Demo Mode works with no credentials
+python -m pytest -q
+python -m streamlit run app.py --server.port 8599
 ```
 
 Optional (for the AI parser):
 
 ```bash
 brew install ollama
-ollama pull gemma:7b
+ollama pull gemma:2b
 ollama serve
 ```
 

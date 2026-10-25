@@ -35,7 +35,7 @@ def test_bill_shows_eligible_spend_when_cashback_applies():
     assert result.estimated_cashback > 0
     assert rows["Cashback-eligible spend"] == "$850.00"
     assert rows["Estimated cashback"] == "−$30.00"
-    assert rows["Upfront payment (due today)"] == "$975.00"
+    assert rows["Estimated upfront payment"] == "$975.00"
 
 
 def test_bill_shows_instant_discount_only_when_present():

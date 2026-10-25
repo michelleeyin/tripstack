@@ -1,9 +1,12 @@
 # Promotion parser benchmark — Gemma vs. rule-based fallback
 
-Measured on 2026-10-24, macOS arm64 (16 GB), Ollama 0.40.11, 10 hand-labelled
+Measured on 2026-10-24, macOS arm64 (16 GB), Ollama 0.40.11, 10 labelled
 promotion texts × 9 fields (`data/promotion_bench.json`).
 
-Reproduce with:
+Historical results precede the current parser and prompt revisions. No raw run
+artifact is included; rerun the benchmark to assess the current version.
+
+Run the current benchmark with:
 
 ```bash
 OLLAMA_MODEL=gemma:7b python benchmark_parser.py --json
@@ -92,9 +95,10 @@ the code.
    discount).
    → Hybrid now takes numeric values from the rule parser **only**.
 
-Result of the guardrails: a hallucinated value can no longer reach the pricing
-engine. The worst case is a promotion flagged `unknown`, which the eligibility
-validator excludes from reported savings.
+The source checks reject unsupported values and flag unresolved promotions as
+`unknown`, excluding them from reported savings. A number occurring in the text
+does not establish its meaning or eligibility; source checks cannot guarantee
+that every extraction error is caught.
 
 ---
 
@@ -107,12 +111,13 @@ saying out loud.
 Why keep the model:
 
 - **It wins the fields regexes are worst at** (`stackable`: 10 vs 9), and it
-  classifies promo *type* correctly on phrasing no rule anticipates.
+  classified promo *type* correctly in these ten cases.
 - **The benchmark favours rules by construction.** These texts are tidy. Real
   promotion copy is multi-clause, misspelled, and full of conditions like
-  "except where prohibited"; that is where extraction beats pattern matching.
+  "except where prohibited". This benchmark does not measure those cases.
 - **The cost of being wrong is bounded.** Every value is grounded in the source
-  text, and anything unverifiable is excluded from savings rather than guessed.
+  text, and unresolved benefits are excluded from savings. Incorrect assignment
+  of a source number to a field remains a possible error.
 - **The hybrid strategy closes most of the gap**: 96.7% with gemma:7b, versus
   93.3% for the model alone and 97.8% for rules alone.
 
@@ -123,7 +128,7 @@ a claim about general accuracy.
 
 ## Notes on method
 
-- Labels were written by hand before either parser was run.
+- Expected labels are stored with the benchmark cases.
 - A money/rate field counts as correct when within 0.005 of the label.
 - `requires_verification` is a safety flag: case c08 ("Terms shown after
   login") must be flagged, not guessed.

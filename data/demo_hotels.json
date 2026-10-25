@@ -5,10 +5,27 @@
     "city": "Chicago",
     "currency": "USD",
     "platforms": {
-      "Provider A": {"nightly": 172, "room_type": "Standard King", "refundable": true},
-      "Provider B": {"nightly": 168, "room_type": "Standard King", "refundable": true},
-      "Provider C": {"nightly": 159, "room_type": "Standard King", "refundable": false, "cancellation_policy": "Non-refundable prepaid rate"}
-    }
+      "Provider A": {
+        "nightly": 172,
+        "room_type": "Standard King",
+        "refundable": true
+      },
+      "Provider B": {
+        "nightly": 168,
+        "room_type": "Standard King",
+        "refundable": true
+      },
+      "Provider C": {
+        "nightly": 159,
+        "room_type": "Standard King",
+        "refundable": false,
+        "cancellation_policy": "Non-refundable prepaid rate"
+      }
+    },
+    "area": "Streeterville",
+    "latitude": 41.8925,
+    "longitude": -87.62,
+    "location_note": "Illustrative demo coordinates; not a real hotel address"
   },
   {
     "hotel_id": "hotel-chi-002",
@@ -16,10 +33,27 @@
     "city": "Chicago",
     "currency": "USD",
     "platforms": {
-      "Provider A": {"nightly": 141, "room_type": "Queen Studio", "refundable": true},
-      "Provider B": {"nightly": 136, "room_type": "Queen Studio", "refundable": true},
-      "Provider C": {"nightly": 129, "room_type": "Queen Studio", "refundable": true, "resort_fee": false}
-    }
+      "Provider A": {
+        "nightly": 141,
+        "room_type": "Queen Studio",
+        "refundable": true
+      },
+      "Provider B": {
+        "nightly": 136,
+        "room_type": "Queen Studio",
+        "refundable": true
+      },
+      "Provider C": {
+        "nightly": 129,
+        "room_type": "Queen Studio",
+        "refundable": true,
+        "resort_fee": false
+      }
+    },
+    "area": "Loop",
+    "latitude": 41.882,
+    "longitude": -87.629,
+    "location_note": "Illustrative demo coordinates; not a real hotel address"
   },
   {
     "hotel_id": "hotel-chi-003",
@@ -27,9 +61,22 @@
     "city": "Chicago",
     "currency": "USD",
     "platforms": {
-      "Provider A": {"nightly": 118, "room_type": "Double Double", "refundable": true},
-      "Provider C": {"nightly": 112, "room_type": "Double Double", "refundable": false, "cancellation_policy": "Non-refundable"}
-    }
+      "Provider A": {
+        "nightly": 118,
+        "room_type": "Double Double",
+        "refundable": true
+      },
+      "Provider C": {
+        "nightly": 112,
+        "room_type": "Double Double",
+        "refundable": false,
+        "cancellation_policy": "Non-refundable"
+      }
+    },
+    "area": "River North",
+    "latitude": 41.894,
+    "longitude": -87.636,
+    "location_note": "Illustrative demo coordinates; not a real hotel address"
   },
   {
     "hotel_id": "hotel-nyc-001",
@@ -37,10 +84,27 @@
     "city": "New York",
     "currency": "USD",
     "platforms": {
-      "Provider A": {"nightly": 268, "room_type": "Standard King", "refundable": true},
-      "Provider B": {"nightly": 259, "room_type": "Standard King", "refundable": true},
-      "Provider C": {"nightly": 244, "room_type": "Standard King", "refundable": false, "cancellation_policy": "Non-refundable"}
-    }
+      "Provider A": {
+        "nightly": 268,
+        "room_type": "Standard King",
+        "refundable": true
+      },
+      "Provider B": {
+        "nightly": 259,
+        "room_type": "Standard King",
+        "refundable": true
+      },
+      "Provider C": {
+        "nightly": 244,
+        "room_type": "Standard King",
+        "refundable": false,
+        "cancellation_policy": "Non-refundable"
+      }
+    },
+    "area": "Midtown",
+    "latitude": 40.758,
+    "longitude": -73.9855,
+    "location_note": "Illustrative demo coordinates; not a real hotel address"
   },
   {
     "hotel_id": "hotel-nyc-002",
@@ -48,10 +112,27 @@
     "city": "New York",
     "currency": "USD",
     "platforms": {
-      "Provider A": {"nightly": 213, "room_type": "Queen Loft", "refundable": true},
-      "Provider B": {"nightly": 205, "room_type": "Queen Loft", "refundable": true, "resort_fee": false},
-      "Provider C": {"nightly": 198, "room_type": "Queen Loft", "refundable": true}
-    }
+      "Provider A": {
+        "nightly": 213,
+        "room_type": "Queen Loft",
+        "refundable": true
+      },
+      "Provider B": {
+        "nightly": 205,
+        "room_type": "Queen Loft",
+        "refundable": true,
+        "resort_fee": false
+      },
+      "Provider C": {
+        "nightly": 198,
+        "room_type": "Queen Loft",
+        "refundable": true
+      }
+    },
+    "area": "Lower East Side",
+    "latitude": 40.7185,
+    "longitude": -73.988,
+    "location_note": "Illustrative demo coordinates; not a real hotel address"
   },
   {
     "hotel_id": "hotel-nyc-003",
@@ -59,9 +140,22 @@
     "city": "New York",
     "currency": "USD",
     "platforms": {
-      "Provider A": {"nightly": 176, "room_type": "Double", "refundable": true},
-      "Provider C": {"nightly": 164, "room_type": "Double", "refundable": false, "cancellation_policy": "Non-refundable"}
-    }
+      "Provider A": {
+        "nightly": 176,
+        "room_type": "Double",
+        "refundable": true
+      },
+      "Provider C": {
+        "nightly": 164,
+        "room_type": "Double",
+        "refundable": false,
+        "cancellation_policy": "Non-refundable"
+      }
+    },
+    "area": "Brooklyn waterfront",
+    "latitude": 40.7,
+    "longitude": -73.994,
+    "location_note": "Illustrative demo coordinates; not a real hotel address"
   },
   {
     "hotel_id": "hotel-bos-001",
@@ -69,10 +163,26 @@
     "city": "Boston",
     "currency": "USD",
     "platforms": {
-      "Provider A": {"nightly": 198, "room_type": "Standard King", "refundable": true},
-      "Provider B": {"nightly": 191, "room_type": "Standard King", "refundable": true},
-      "Provider C": {"nightly": 182, "room_type": "Standard King", "refundable": true}
-    }
+      "Provider A": {
+        "nightly": 198,
+        "room_type": "Standard King",
+        "refundable": true
+      },
+      "Provider B": {
+        "nightly": 191,
+        "room_type": "Standard King",
+        "refundable": true
+      },
+      "Provider C": {
+        "nightly": 182,
+        "room_type": "Standard King",
+        "refundable": true
+      }
+    },
+    "area": "Back Bay",
+    "latitude": 42.3503,
+    "longitude": -71.078,
+    "location_note": "Illustrative demo coordinates; not a real hotel address"
   },
   {
     "hotel_id": "hotel-bos-002",
@@ -80,10 +190,28 @@
     "city": "Boston",
     "currency": "USD",
     "platforms": {
-      "Provider A": {"nightly": 154, "room_type": "Queen Suite", "refundable": true},
-      "Provider B": {"nightly": 148, "room_type": "Queen Suite", "refundable": true, "resort_fee": false},
-      "Provider C": {"nightly": 139, "room_type": "Queen Suite", "refundable": false, "cancellation_policy": "Non-refundable"}
-    }
+      "Provider A": {
+        "nightly": 154,
+        "room_type": "Queen Suite",
+        "refundable": true
+      },
+      "Provider B": {
+        "nightly": 148,
+        "room_type": "Queen Suite",
+        "refundable": true,
+        "resort_fee": false
+      },
+      "Provider C": {
+        "nightly": 139,
+        "room_type": "Queen Suite",
+        "refundable": false,
+        "cancellation_policy": "Non-refundable"
+      }
+    },
+    "area": "Kendall Square, Cambridge",
+    "latitude": 42.3628,
+    "longitude": -71.09,
+    "location_note": "Illustrative demo coordinates; not a real hotel address"
   },
   {
     "hotel_id": "hotel-bos-003",
@@ -91,8 +219,47 @@
     "city": "Boston",
     "currency": "USD",
     "platforms": {
-      "Provider A": {"nightly": 131, "room_type": "Double", "refundable": true},
-      "Provider C": {"nightly": 124, "room_type": "Double", "refundable": true}
+      "Provider A": {
+        "nightly": 131,
+        "room_type": "Double",
+        "refundable": true
+      },
+      "Provider C": {
+        "nightly": 124,
+        "room_type": "Double",
+        "refundable": true
+      }
+    },
+    "area": "Seaport",
+    "latitude": 42.349,
+    "longitude": -71.04,
+    "location_note": "Illustrative demo coordinates; not a real hotel address"
+  },
+  {
+    "hotel_id": "hotel-bos-004",
+    "hotel_name": "Downtown Commons Stay",
+    "city": "Boston",
+    "currency": "USD",
+    "area": "Downtown / Government Center",
+    "latitude": 42.3585,
+    "longitude": -71.06,
+    "location_note": "Illustrative demo coordinates; not a real hotel address",
+    "platforms": {
+      "Provider A": {
+        "nightly": 218,
+        "room_type": "Standard Queen",
+        "refundable": true
+      },
+      "Provider B": {
+        "nightly": 212,
+        "room_type": "Standard Queen",
+        "refundable": true
+      },
+      "Provider C": {
+        "nightly": 205,
+        "room_type": "Standard Queen",
+        "refundable": true
+      }
     }
   }
 ]

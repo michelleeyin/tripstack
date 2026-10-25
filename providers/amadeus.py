@@ -18,6 +18,7 @@ from typing import Any
 
 import httpx
 
+from ..engine.location import provider_coordinates
 from ..config import get_settings
 from ..models.hotel import HotelOffer
 from ..models.money import to_money
@@ -56,6 +57,7 @@ class AmadeusProvider(HotelProvider):
         self.host = (host or settings.amadeus_host).strip()
         self.timeout_s = timeout_s or settings.http_timeout_s
         self._token: str | None = None
+        self._hotel_coordinates: dict[str, tuple] = {}
 
     # -- auth ------------------------------------------------------------
     def _get_token(self) -> str:
@@ -122,6 +124,10 @@ class AmadeusProvider(HotelProvider):
         url = f"https://{self.host}/v1/reference-data/locations/hotels/by-city"
         params = {"cityCode": city_code, "radius": 20, "radiusUnit": "KM"}
         data = await self._get(url, params)
+        for hotel in data.get("data", []):
+            geo = hotel.get("geoCode") or {}
+            self._hotel_coordinates[hotel.get("hotelId", "")] = provider_coordinates(
+                geo.get("latitude"), geo.get("longitude"))
         ids = [h.get("hotelId") for h in data.get("data", []) if h.get("hotelId")]
         return ids[: max(5, min(limit, 40))]
 
@@ -150,9 +156,13 @@ class AmadeusProvider(HotelProvider):
             hotel_info = hotel.get("hotel", {})
             hotel_id = hotel_info.get("hotelId", "unknown")
             hotel_name = hotel_info.get("name", "Unknown hotel")
+            coordinates = provider_coordinates(hotel_info.get("latitude"), hotel_info.get("longitude"))
+            if coordinates[0] is None:
+                coordinates = self._hotel_coordinates.get(hotel_id, (None, None))
             for offer in hotel.get("offers", []):
                 normalized = _normalize_offer(
-                    hotel_id, hotel_name, city, offer, check_in, check_out, retrieved_at
+                    hotel_id, hotel_name, city, offer, check_in, check_out, retrieved_at,
+                    latitude=coordinates[0], longitude=coordinates[1],
                 )
                 if normalized is not None:
                     offers.append(normalized)
@@ -185,6 +195,8 @@ def _normalize_offer(
     check_in: date,
     check_out: date,
     retrieved_at: datetime,
+    latitude: float | None = None,
+    longitude: float | None = None,
 ) -> HotelOffer | None:
     """Map one Amadeus offer onto the shared schema.
 
@@ -212,11 +224,15 @@ def _normalize_offer(
         )
     )
     refundable = _is_refundable(offer)
+    latitude, longitude = provider_coordinates(latitude, longitude)
     return HotelOffer(
         offer_id=f"amadeus-{hotel_id}-{offer.get('id', '0')}",
         hotel_id=hotel_id,
         hotel_name=hotel_name,
         city=city,
+        latitude=latitude,
+        longitude=longitude,
+        location_source="provider" if latitude is not None else "unknown",
         check_in=check_in,
         check_out=check_out,
         room_type=(offer.get("room") or {}).get("typeEstimated", {}).get("category")

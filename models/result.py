@@ -44,6 +44,8 @@ class ComparisonResult:
     warnings: list[str] = field(default_factory=list)
     confidence: str = "estimated"
     explanation: str = ""
+    distance_km: float | None = None
+    location_reference: str = ""
 
     # --- convenience passthroughs -------------------------------------
     @property
@@ -84,6 +86,9 @@ class ComparisonResult:
         return {
             "Hotel": self.offer.hotel_name,
             "City": self.offer.city,
+            "Area": self.offer.area,
+            "Distance (km)": round(self.distance_km, 2) if self.distance_km is not None else None,
+            "Distance to": self.location_reference or "Not available",
             "Platform": self.offer.platform,
             "Room": self.offer.room_type,
             "Refundable": "Yes" if self.offer.refundable else "No",
@@ -105,6 +110,9 @@ class SegmentChoice:
     selected: ComparisonResult | None = None
     alternatives: list[ComparisonResult] = field(default_factory=list)
     warnings: list[str] = field(default_factory=list)
+    location_preference: str = "any"
+    location_reference: str = ""
+    max_distance_km: float | None = None
 
     @property
     def nights(self) -> int:

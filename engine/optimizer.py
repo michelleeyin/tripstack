@@ -23,6 +23,7 @@ from ..models.hotel import HotelOffer, TripRequest
 from ..models.money import ZERO, to_money
 from ..models.promotion import Promotion
 from ..models.result import ComparisonResult, SegmentChoice, TripPlan
+from .location import filter_location, offer_distance, reference_for_segment
 from .comparison import build_comparison_result, rank_results
 
 
@@ -50,7 +51,15 @@ def optimize_trip(
         ]
         if request.refundable_only:
             seg_offers = [o for o in seg_offers if o.refundable]
+        seg_offers, location_warnings = filter_location(seg_offers, segment)
+        reference = reference_for_segment(segment)
+        location_metadata = dict(
+            location_preference=segment.location_preference,
+            location_reference=reference[0] if reference else "",
+            max_distance_km=segment.max_distance_km if segment.location_preference != "any" else None,
+        )
         if not seg_offers:
+            warnings.extend(location_warnings)
             warnings.append(
                 f"No offers found for {segment.city} "
                 f"({segment.check_in} to {segment.check_out})"
@@ -60,7 +69,8 @@ def optimize_trip(
                     city=segment.city,
                     check_in=segment.check_in,
                     check_out=segment.check_out,
-                    warnings=["No comparable offers available"],
+                    warnings=["No comparable offers available under the selected constraints"] + location_warnings,
+                    **location_metadata,
                 )
             )
             continue
@@ -70,6 +80,9 @@ def optimize_trip(
             build_comparison_result(o, promotions, today, objective=request.objective)
             for o in seg_offers
         ]
+        for result in results:
+            result.distance_km = offer_distance(result.offer, segment)
+            result.location_reference = reference[0] if reference else ""
         ranked = rank_results(results, request.objective)
 
         if request.objective == "lowest_certain":
@@ -88,7 +101,7 @@ def optimize_trip(
         total_cashback = to_money(total_cashback + selected.estimated_cashback)
         total_net = to_money(total_net + selected.estimated_net_cost)
 
-        seg_warnings = list(selected.warnings)
+        seg_warnings = list(selected.warnings) + location_warnings
         if not selected.offer.refundable:
             seg_warnings.append(
                 "Selected rate is non-refundable; cancellation terms differ from "
@@ -100,6 +113,7 @@ def optimize_trip(
                 check_in=segment.check_in,
                 check_out=segment.check_out,
                 selected=selected,
+                **location_metadata,
                 alternatives=ranked[1:],
                 warnings=_dedupe(seg_warnings),
             )

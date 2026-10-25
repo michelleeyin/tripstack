@@ -116,7 +116,7 @@ def test_savings_are_measured_against_cheapest_advertised_baseline():
 def test_comparison_table_and_trip_report_agree_on_promotions():
     """The dashboard table and the report must show the same promotion set.
 
-    Regression: the table was built with the default objective while the plan
+    Regression: the table used the default objective while the plan
     used the chosen one, so 'lowest upfront'/'lowest certain cost' showed two
     different promotion sets and two different totals.
     """

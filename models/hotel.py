@@ -22,6 +22,10 @@ class HotelOffer(BaseModel):
     city: str
     check_in: date
     check_out: date
+    area: str = "Unknown"
+    latitude: float | None = Field(default=None, ge=-90, le=90, allow_inf_nan=False)
+    longitude: float | None = Field(default=None, ge=-180, le=180, allow_inf_nan=False)
+    location_source: Literal["unknown", "demo", "provider"] = "unknown"
     room_type: str = "Standard"
     platform: str
     currency: str = "USD"
@@ -46,6 +50,8 @@ class HotelOffer(BaseModel):
 
     @model_validator(mode="after")
     def _validate_stay(self) -> "HotelOffer":
+        if (self.latitude is None) != (self.longitude is None):
+            raise ValueError("latitude and longitude must be supplied together")
         if self.check_out <= self.check_in:
             raise ValueError(
                 f"check_out ({self.check_out}) must be after check_in ({self.check_in})"
@@ -79,8 +85,18 @@ class TripSegment(BaseModel):
     check_in: date
     check_out: date
 
+    location_preference: Literal["any", "downtown", "custom"] = "any"
+    max_distance_km: float = Field(default=3.0, gt=0, le=200, allow_inf_nan=False)
+    reference_name: str = ""
+    reference_latitude: float | None = Field(default=None, ge=-90, le=90, allow_inf_nan=False)
+    reference_longitude: float | None = Field(default=None, ge=-180, le=180, allow_inf_nan=False)
+
     @model_validator(mode="after")
     def _validate_dates(self) -> "TripSegment":
+        if (self.reference_latitude is None) != (self.reference_longitude is None):
+            raise ValueError("reference latitude and longitude must be supplied together")
+        if self.location_preference == "custom" and self.reference_latitude is None:
+            raise ValueError("custom location requires reference coordinates")
         if self.check_out <= self.check_in:
             raise ValueError(
                 f"{self.city}: check_out must be after check_in"

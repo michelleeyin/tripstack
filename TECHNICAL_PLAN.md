@@ -1,198 +1,118 @@
-# TripStack — Technical Design & MVP Implementation Plan
+# TripStack technical notes
 
-**Version:** 0.1 MVP · **Target:** Hacktoberfest 2026 · **License:** MIT
-
----
-
-## 1. Overview
-
-**Problem.** Comparing hotel prices for a 15-day, multi-city trip means manual
-evaluation of platform prices, taxes, fees, cashback rates and caps, coupon
-eligibility, stacking rules and cancellation policies. The lowest advertised
-price is not the lowest final cost.
-
-**Solution.** TripStack is an open-source AI agent that automates hotel offer
-discovery, interprets discount conditions with an open-weight model, compares
-effective costs with a deterministic engine, and emits an explainable report.
-
-**Value proposition.** One trip. Multiple destinations. Dozens of offers. One
-optimized savings report. The product answers *how to book more cheaply*, not
-*what to see*.
-
----
-
-## 2. MVP Scope
-
-### P0 (required)
-
-1. User enters destinations, dates, budget.
-2. Offers retrieved automatically from one supported provider.
-3. Cashback / promotion rules loaded and matched.
-4. Open-weight model extracts structured discount conditions.
-5. Deterministic pricing engine computes effective cost.
-6. Offers ranked; best options recommended.
-7. Dashboard shows savings, sources and eligibility warnings.
-8. Demo Mode reproduces the workflow with no paid credentials.
-
-### P1 (optional)
-
-Multiple providers · multiple cities · cashback cap and stacking analysis ·
-exportable report · price-freshness indicators.
-
-### Out of scope
-
-Flights · checkout/payment · credit-card linking · scraping login-protected
-cashback accounts · "we search every travel site" claims · un-sourced real-time
-cashback rates · automatic reservations.
-
-### Success criteria
-
-A search can be submitted without manually entering offers; at least one
-provider returns offers in Live Mode; the model parses multiple promotion
-descriptions; pricing is correct and tested; recommendations separate upfront
-from net cost; Demo Mode reproduces the flow; repo has setup docs, tests,
-license and a working demo.
-
----
-
-## 3. Architecture
+## Data flow
 
 ```text
-User Input -> Trip Search Controller
-                 -> Hotel Provider (normalized offers)
-                 -> Promotion rules -> Gemma parser
-                 -> Eligibility Validator -> Pricing Engine
-                 -> Trip Optimizer -> Savings Report -> Streamlit
+Trip request -> hotel provider -> quote snapshot
+Promotion text -> extraction -> source validation -> reviewed promotion
+Quote snapshot + promotions -> eligibility -> location filter -> pricing -> ranking
+Ranked segments -> trip totals -> recommendation and report
 ```
 
-| Layer | Technology |
+The hotel provider supplies prices. Promotion extraction supplies conditions;
+model output does not supply hotel prices or perform monetary arithmetic.
+
+## Components
+
+| Component | Implementation |
 |---|---|
-| Frontend | Streamlit |
-| Backend | Python 3.11+ |
-| AI model | Google Gemma via Ollama |
-| Validation | Pydantic v2 |
-| Hotel search | Amadeus (live) / local fixtures (demo) |
-| Promotion DB | JSON |
-| Data | Pandas (display), Decimal (money) |
-| HTTP | httpx |
-| Tests | pytest |
+| Interface | Streamlit; shared styles in `design.py` |
+| Model inference | Gemma through Ollama, using structured JSON output |
+| Input validation | Pydantic |
+| Pricing | Python `Decimal` |
+| Hotel data | Local demo records or the Amadeus adapter |
+| Requests | httpx |
+| Tests | pytest and Streamlit AppTest |
 
----
+`app.py` provides three views: Your trip, Add an offer and Inside TripStack.
+`workflow.evaluate_snapshot` derives the comparison table and trip plan from the
+same eligible quotes. Applying or removing a promotion recalculates that
+snapshot rather than refreshing provider prices.
 
-## 4. Modules
+## Promotion extraction
 
-| Module | Responsibility |
-|---|---|
-| `models/` | `HotelOffer`, `TripRequest`, `Promotion`, `PricingBreakdown`, `ComparisonResult`, `TripPlan`, money helpers |
-| `providers/` | `HotelProvider` ABC, `DemoProvider` (fixtures), `AmadeusProvider` (OAuth + hotel-offers) |
-| `ai/` | Ollama/Gemma client, prompt templates, promotion parser with rule-based fallback |
-| `engine/eligibility` | Expiry, platform, category, minimum spend, cap, stacking, ambiguity |
-| `engine/pricing` | Upfront payment, cashback with caps, net cost, guaranteed cost |
-| `engine/comparison` | Match promotions, price, rank by objective |
-| `engine/optimizer` | Per-segment selection, aggregation, baseline comparison |
-| `app.py` | 4 pages: Search · Comparison · Report · Promotion Lab |
+The prompt treats promotion text as data, limits its length and requests
+structured fields. The client records request duration, model loading time and
+token counts when the server supplies them. Connection, model-loading and output
+errors are surfaced as extraction failures with an explicit fallback reason.
 
-### Eligibility states
+- `hybrid` takes numeric fields from rule matches and other conditions from the
+  model. Explicit source exclusions override conflicting model booleans.
+- `ai` uses model output subject to validation and source checks.
+- `rules` does not invoke the model.
 
-`verified` · `estimated` · `unknown` · `ineligible`. Only `verified`/`estimated`
-benefits reduce the reported net cost; `unknown` is always excluded and flagged.
+Numbers and dates absent from the source are discarded. Conflicting amount
+roles, multiple rates and truncated input require review and do not enter
+reported savings. A user review confirms the extraction was inspected; it does
+not change an estimated benefit into a verified payout.
 
-### Parser safety
+Eligibility states are `verified`, `estimated`, `unknown` and `ineligible`.
+Unknown and ineligible benefits do not reduce reported costs.
 
-Promotion text is untrusted data. The prompt forbids following instructions
-found inside it, caps input length, requires JSON only, and tells the model to
-return `null` rather than guess. Output is validated by Pydantic; on any
-failure the parser falls back to deterministic heuristics and marks the rule
-`requires_verification`.
+Historical experiments are recorded in [parser-benchmark.md](docs/parser-benchmark.md).
+They use a small fixed dataset and do not establish general model accuracy.
 
-Two additional guardrails were added after measuring real model behaviour
-(`docs/parser-benchmark.md`):
+## Pricing and ranking
 
-1. **Grounding check** — every number and date the model returns must literally
-   appear in the source text. gemma:2b produced `rate: 0.08` for a text with no
-   numbers, and `valid_until: 2023-04-01` for texts with no date. Both are now
-   discarded and flagged.
-2. **Hybrid merge** — numeric fields come from the rule parser only (grounded by
-   construction); semantic fields (`type`, `stackable`, `taxes_eligible`,
-   `requires_verification`) come from the model, which reads phrasing the
-   regexes cannot.
-
-Prompt is zero-shot: with worked examples, small models copied the example's
-figures into unrelated promotions.
-
----
-
-## 5. Data models
-
-See `models/`. Canonical shapes:
-
-```jsonc
-// HotelOffer
-{"offer_id":"demo-001","hotel_id":"hotel-001","hotel_name":"Example Hotel",
- "city":"Chicago","check_in":"2026-11-10","check_out":"2026-11-15",
- "room_type":"Standard King","platform":"Provider A","currency":"USD",
- "base_price":850,"taxes":100,"mandatory_fees":25,"refundable":true,
- "source_url":"https://example.com","data_mode":"demo",
- "retrieved_at":"2026-10-24T18:00:00-05:00"}
-
-// Promotion
-{"promotion_id":"promo-001","platform":"Provider A","type":"cashback",
- "rate":0.08,"cap":30,"minimum_spend":100,"taxes_eligible":false,
- "stackable":false,"valid_until":"2026-12-31",
- "source_url":"https://example.com/promo","verification_status":"estimated"}
-
-// ComparisonResult
-{"offer_id":"demo-001","upfront_payment":975,"estimated_cashback":30,
- "estimated_net_cost":945,"currency":"USD","promotion_status":"estimated",
- "warnings":["Cashback is not guaranteed"]}
+```text
+Upfront payment    = base + taxes + mandatory fees - instant discounts
+Estimated cashback = eligible spend × rate, limited by the promotion cap
+Estimated net cost = upfront payment - estimated cashback
 ```
 
----
+Amounts are quantized to cents; fractional rates retain six decimal places.
+Percentage instant discounts apply to the base room rate. Tax amounts are not
+recomputed. Cashback excludes taxes and fees unless explicitly allowed.
 
-## 6. Roadmap
+Promotion selection prices candidate combinations with the same engine used
+for reporting. Selection and offer ranking share objective and tie-breaking
+rules. Objectives are lowest estimated net cost, lowest upfront payment and
+lowest cost using verified benefits only.
 
-| Phase | Work | Status |
-|---|---|---|
-| 1 | Repo scaffold, Streamlit shell, schemas, demo data | Done |
-| 2 | Pricing engine, eligibility, unit tests | Done |
-| 3 | Gemma/Ollama parser, validation, fallback, UI display | Done — Ollama 0.40.11 + gemma:7b running locally, real model calls verified, benchmark recorded |
-| 4 | Amadeus adapter, live/demo separation, failure handling | Adapter done; needs credentials to verify |
-| 5 | Ranking, trip report, disclosures, demo video, article | Report done; video + article pending |
+Savings baselines use pre-promotion prices among quotes satisfying the same
+currency, location and refund constraints. Totals for incomplete itineraries
+cover matched segments only; an itinerary with no matching stays is not shown
+as a free trip.
 
----
+## Location constraints
 
-## 7. Testing
+Each segment supports an unrestricted location, a built-in downtown reference
+or a custom reference with coordinates. Haversine distance determines radius
+eligibility before prices are ranked. Missing coordinates fail an active radius
+constraint; they do not become zero distance. No matching hotel produces no
+recommendation rather than an unconstrained replacement.
 
-39 pytest cases across money arithmetic, cashback caps, tax exclusion,
-expired/mismatched/below-minimum promotions, coupon stacking, unknown
-eligibility, currency safety, ranking, refundability, multi-city aggregation,
-budget warnings, parser extraction and malformed model output.
+Reference points are approximate anchors, not neighborhood boundaries.
+Distances do not estimate travel time or transportation cost. See
+[location-preferences.md](docs/location-preferences.md).
 
----
+## State and reporting
 
-## 8. Security & transparency
+Form values survive navigation between views. Custom promotions, extraction
+records and the hotel snapshot are stored in the current browser session.
+A page reload or server restart can clear this state.
 
-Keys live in env vars only · no credential commits · no login-walled scraping ·
-provider terms and rate limits respected · untrusted text never controls app
-behaviour · every model output validated · source URLs and timestamps shown ·
-simulated data labelled · cashback never presented as guaranteed · no payment
-data · graceful fallback when a provider is unavailable.
+The downloadable report includes totals, eligible selections, geographic
+preferences, source information and custom-promotion extraction records.
+Money values are exported as decimal strings.
 
----
+## Operational limits
 
-## 9. Definition of Done
+Demo prices and coordinates are simulated. The Amadeus test host is a sandbox;
+production access, coverage and refund behavior need verification with the
+configured account. No live multi-platform promotion search, automatic booking,
+payment processing or account scraping is implemented.
 
-- [x] Trip search input
-- [x] Automatic offer retrieval (Demo Mode; Live Mode adapter ready)
-- [x] Gemma promotion extraction wired with validated output
-- [x] Pricing calculations covered by tests
-- [x] Upfront vs. estimated net cost distinction
-- [x] Traceable savings (source URL + timestamp per offer)
-- [x] Trip-level savings report
-- [x] Tests, requirements, license, setup docs
-- [ ] Public GitHub repository
-- [ ] Demo video (~90 s)
-- [ ] DEV submission article
+Configuration comes from environment variables. `.env.example` documents the
+settings and is not loaded automatically. Credentials must not be committed.
 
-**Principle:** automate repetitive deal comparison while keeping every
-recommendation transparent, verifiable and realistic.
+## Verification
+
+```bash
+python -m pytest -q
+```
+
+The suite covers money and rates, eligibility and stacking, source validation,
+model error handling, location filtering, snapshot recalculation and page
+interactions. Model responses in automated tests are mocked. Live inference
+checks are separate from the deterministic test suite.
