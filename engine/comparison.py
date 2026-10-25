@@ -18,9 +18,16 @@ def build_comparison_result(
     offer: HotelOffer,
     promotions: list[Promotion],
     today: date | None = None,
+    objective: str = "lowest_net",
 ) -> ComparisonResult:
-    """Match promotions to one offer and price it end-to-end."""
-    chosen, all_results, warnings = select_promotions(offer, promotions, today)
+    """Match promotions to one offer and price it end-to-end.
+
+    ``objective`` drives which promotion combination is chosen, so the set of
+    promotions is optimal for the metric the user is actually sorting by.
+    """
+    chosen, all_results, warnings = select_promotions(
+        offer, promotions, today, objective=objective
+    )
     status_map = {r.promotion_id: r.status for r in all_results}
 
     breakdown = price_offer(offer, chosen, status_map)
@@ -95,6 +102,7 @@ def compare_offers(
     currency: str = "USD",
     refundable_only: bool = False,
     exclude_uncertain: bool = False,
+    objective: str = "lowest_net",
 ) -> tuple[list[ComparisonResult], list[str]]:
     """Price and rank a set of comparable offers.
 
@@ -113,12 +121,12 @@ def compare_offers(
             continue
         if refundable_only and not offer.refundable:
             continue
-        result = build_comparison_result(offer, promotions, today)
+        result = build_comparison_result(offer, promotions, today, objective=objective)
         if exclude_uncertain and result.promotion_status == "unknown":
             continue
         results.append(result)
 
-    return rank_results(results, "lowest_net"), warnings
+    return rank_results(results, objective), warnings
 
 
 def _sort_key(objective: Objective):

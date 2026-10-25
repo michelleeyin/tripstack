@@ -32,7 +32,16 @@ def compute_cashback_eligible_spend(offer: HotelOffer, promotion: Promotion) -> 
 
 
 def compute_instant_discount(offer: HotelOffer, promotion: Promotion) -> Decimal:
-    """Upfront, point-of-sale reduction (coupons and instant discounts)."""
+    """Upfront, point-of-sale reduction (coupons and instant discounts).
+
+    A percentage discount applies to the room rate only: taxes and fees are
+    charged on the discounted rate, not discounted themselves. ``taxes_eligible``
+    therefore affects cashback only, and a rule that sets it on a discount is
+    flagged rather than silently honoured.
+
+    Whatever this function returns is also what promotion selection compares,
+    so the two can never disagree again.
+    """
     if promotion.type == "cashback":
         return ZERO
     if promotion.rate is not None:
@@ -42,6 +51,19 @@ def compute_instant_discount(offer: HotelOffer, promotion: Promotion) -> Decimal
     if promotion.cap is not None:
         value = min(value, promotion.cap)
     return to_money(value)
+
+
+def score_for_objective(breakdown: PricingBreakdown, objective: str) -> Decimal:
+    """The single number an objective ranks on.
+
+    Sharing this between promotion selection and offer ranking is what keeps
+    the two from disagreeing.
+    """
+    if objective == "lowest_upfront":
+        return breakdown.upfront_payment
+    if objective == "lowest_certain":
+        return breakdown.guaranteed_net_cost
+    return breakdown.estimated_net_cost
 
 
 def compute_cashback(
@@ -121,6 +143,11 @@ def price_offer(
                 instant_discount = to_money(instant_discount + discount)
                 if verified:
                     verified_instant = to_money(verified_instant + discount)
+                if promo.taxes_eligible:
+                    warnings.append(
+                        f"'{promo.promotion_id}': taxes_eligible has no effect on a "
+                        "discount — percentages apply to the room rate only"
+                    )
             else:
                 warnings.append(
                     f"'{promo.promotion_id}' is not confirmed; discount not counted"

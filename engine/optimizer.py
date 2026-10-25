@@ -67,7 +67,8 @@ def optimize_trip(
 
         analyzed += len(seg_offers)
         results = [
-            build_comparison_result(o, promotions, today) for o in seg_offers
+            build_comparison_result(o, promotions, today, objective=request.objective)
+            for o in seg_offers
         ]
         ranked = rank_results(results, request.objective)
 

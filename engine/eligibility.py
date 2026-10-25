@@ -107,29 +107,23 @@ def evaluate_promotion(
     return res
 
 
-def _benefit_estimate(promotion: Promotion, offer: HotelOffer) -> Decimal:
-    """Rough benefit size used only for ranking promotions, never for reporting."""
-    spend = offer.base_price
-    if promotion.taxes_eligible:
-        spend += offer.taxes_and_fees
-    if promotion.rate is not None:
-        value = spend * promotion.rate
-    else:
-        value = promotion.fixed_amount or ZERO
-    if promotion.cap is not None:
-        value = min(value, promotion.cap)
-    return value
-
-
 def select_promotions(
     offer: HotelOffer,
     promotions: list[Promotion],
     today: date | None = None,
+    objective: str = "lowest_net",
 ) -> tuple[list[Promotion], list[EligibilityResult], list[str]]:
     """Pick the promotions that may be applied to ``offer`` together.
 
     Stacking rule: a non-stackable promotion is used alone. Only mutually
     stackable promotions combine. Incompatible promotions are never summed.
+
+    Candidates are priced with the real engine (``price_offer``) and compared
+    on the same metric the user's objective ranks offers by. Maintaining a
+    separate "estimated benefit" here caused two bugs: picking a larger
+    estimated discount over a smaller *verified* one under the "lowest certain
+    cost" objective, and valuing a percentage discount against a tax base the
+    pricing engine never used.
     """
     results = [evaluate_promotion(p, offer, today) for p in promotions]
     usable = [
@@ -149,20 +143,29 @@ def select_promotions(
     if not usable:
         return [], results, warnings
 
-    # Evaluate every admissible combination, not just the largest single offer.
-    # A lone $50 discount must lose to two stackable $30 discounts ($60);
-    # choosing greedily by individual size silently forfeits $10.
-    stackable = [(p, r) for p, r in usable if p.stackable]
-    candidates: list[tuple[list[Promotion], Decimal]] = [
-        ([p], _benefit_estimate(p, offer)) for p, _ in usable
-    ]
-    if len(stackable) > 1:
-        group = [p for p, _ in stackable]
-        total = sum((_benefit_estimate(p, offer) for p in group), ZERO)
-        candidates.append((group, total))
+    # Local import: pricing imports this module, so this must not be top-level.
+    from .pricing import price_offer, score_for_objective
 
-    # Highest total benefit wins; ties go to the smaller set.
-    chosen, best_value = max(candidates, key=lambda c: (c[1], -len(c[0])))
+    status_map = {r.promotion_id: r.status for p, r in usable}
+
+    # Every admissible combination: each promotion alone, plus the stackable
+    # group together. Two stackable $30 discounts ($60) must beat a lone $50.
+    stackable = [p for p, _ in usable if p.stackable]
+    candidate_sets: list[list[Promotion]] = [[p] for p, _ in usable]
+    if len(stackable) > 1:
+        candidate_sets.append(stackable)
+
+    scored = [
+        (
+            combo,
+            score_for_objective(
+                price_offer(offer, combo, status_map), objective
+            ),
+        )
+        for combo in candidate_sets
+    ]
+    # Lowest objective score wins; ties go to the smaller set.
+    chosen, best_value = min(scored, key=lambda c: (c[1], len(c[0])))
 
     chosen_ids = {p.promotion_id for p in chosen}
     skipped = [p.promotion_id for p, _ in usable if p.promotion_id not in chosen_ids]
@@ -174,8 +177,8 @@ def select_promotions(
             )
         else:
             warnings.append(
-                f"Skipped {', '.join(skipped)}: they are worth less than the "
-                f"selected {best_value} total benefit"
+                f"Skipped {', '.join(skipped)}: the selected combination scores "
+                f"better on '{objective}' ({best_value})"
             )
 
     return chosen, results, warnings
