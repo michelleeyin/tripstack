@@ -50,6 +50,13 @@ def test_unknown_promotion_is_never_a_guaranteed_saving():
     assert not result.counts_as_saving
 
 
+def test_unknown_warning_names_the_promotion_it_refers_to():
+    """Otherwise it reads as if the *applied* promotion was excluded."""
+    promo = cashback(promo_id="mystery-cashback", status="unknown")
+    result = evaluate_promotion(promo, offer(), today=TODAY)
+    assert any("mystery-cashback" in w for w in result.warnings)
+
+
 def test_incompatible_coupon_stacking_is_rejected():
     promos = [
         cashback(promo_id="a", rate="0.08", cap="30.00", stackable=False),

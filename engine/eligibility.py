@@ -86,9 +86,11 @@ def evaluate_promotion(
 
     if promotion.requires_verification or promotion.verification_status == "unknown":
         res.status = EligibilityStatus.UNKNOWN
+        # Name the promotion: without it the warning reads as if the *applied*
+        # discount was excluded, which is a different promotion entirely.
         res.warnings.append(
-            "Terms could not be confirmed from the source; promotion excluded "
-            "from reported savings"
+            f"'{promotion.promotion_id}': terms could not be confirmed from the "
+            "source, so this offer is excluded from reported savings"
         )
         return res
 
