@@ -50,7 +50,10 @@ class Promotion(BaseModel):
     def _coerce_money(cls, value: object) -> Decimal | None:
         if value is None or value == "":
             return None
-        return to_money(value)
+        amount = to_money(value)
+        if not amount.is_finite() or Decimal(str(value)) < 0:
+            raise ValueError("promotion amounts must be finite and non-negative")
+        return amount
 
     @field_validator("rate", mode="before")
     @classmethod

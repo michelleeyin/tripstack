@@ -60,10 +60,14 @@ def _confidence(chosen: list[Promotion]) -> str:
 
 def _explain(offer, chosen, breakdown, warnings) -> str:
     cur = offer.currency
+    discount_term = (
+        f" - instant discount {fmt_money(breakdown.instant_discount, cur)}"
+        if breakdown.instant_discount > ZERO else ""
+    )
     parts = [
         f"{offer.hotel_name} ({offer.room_type}) on {offer.platform}: "
         f"base {fmt_money(offer.base_price, cur)} + tax/fees "
-        f"{fmt_money(offer.taxes_and_fees, cur)} = "
+        f"{fmt_money(offer.taxes_and_fees, cur)}{discount_term} = "
         f"{fmt_money(breakdown.upfront_payment, cur)} upfront for "
         f"{offer.nights} night(s)."
     ]
@@ -87,9 +91,11 @@ def _explain(offer, chosen, breakdown, warnings) -> str:
 
 def _promo_sentence(p: Promotion, currency: str) -> str:
     if p.rate is not None:
-        benefit = f"{p.rate * 100:.2f}% cashback"
+        label = "cashback" if p.type == "cashback" else "off"
+        benefit = f"{p.rate * 100:.2f}% {label}"
     else:
-        benefit = f"{fmt_money(p.fixed_amount, currency)} off"
+        label = "cashback" if p.type == "cashback" else "off"
+        benefit = f"{fmt_money(p.fixed_amount, currency)} {label}"
     if p.cap is not None:
         benefit += f" (capped at {fmt_money(p.cap, currency)})"
     return f"{p.promotion_id} [{p.verification_status}] {benefit}"

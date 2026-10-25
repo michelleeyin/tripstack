@@ -310,14 +310,15 @@ def _parse_date(value: str | None) -> date | None:
 # --------------------------------------------------------------------------
 
 _PCT_RE = re.compile(r"(\d+(?:\.\d+)?)\s*%")
-_MONEY_RE = re.compile(r"\$\s?(\d+(?:[.,]\d{1,2})?)")
+_AMOUNT_PATTERN = r"(?:\d{1,3}(?:,\d{3})+|\d+)(?:\.\d{1,2})?(?![\d,]|\.\d)"
+_MONEY_RE = re.compile(r"\$\s?(" + _AMOUNT_PATTERN + r")")
 _CAP_RE = re.compile(
-    r"(?:maximum|max|up to|capped at|cap(?:ped)? (?:at|of)?)\D{0,20}\$\s?(\d+(?:[.,]\d{1,2})?)",
+    r"(?:maximum|max|up to|capped at|cap(?:ped)? (?:at|of)?)\D{0,20}\$\s?(" + _AMOUNT_PATTERN + r")",
     re.IGNORECASE,
 )
 _MIN_RE = re.compile(
     r"(?:minimum|min\.?(?:\s*purchase)?|at least|spend|purchase|orders? of|of)"
-    r"\D{0,15}\$\s?(\d+(?:[.,]\d{1,2})?)"
+    r"\D{0,15}\$\s?(" + _AMOUNT_PATTERN + r")"
     r"(?:\s*(?:or more|or above|\+|and up|and above))?",
     re.IGNORECASE,
 )

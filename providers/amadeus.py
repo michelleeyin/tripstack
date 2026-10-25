@@ -236,15 +236,35 @@ def _normalize_offer(
 
 
 def _is_refundable(offer: dict[str, Any]) -> bool:
+    # Penalty amounts/types describe what is charged, not a refund promise.
+    # The boolean schema cannot express unknown/conditional refundability;
+    # only an explicit unconditional refund flag passes refundable-only filters.
     policies = offer.get("policies") or {}
+    refund = policies.get("refundable") or {}
+    if not isinstance(refund, dict):
+        return False
+    status = str(refund.get("cancellationRefund", "")).upper()
+    if status:
+        return status == "REFUNDABLE"
+    # The v3 cancellation array contains penalties. Only explicitly zero
+    # penalties across all periods establish free cancellation without needing
+    # deadline inference. Missing amounts and FULL_STAY remain unconfirmed.
     cancellations = policies.get("cancellations") or []
     if not cancellations:
-        return True
-    return any(
-        (c.get("type") or "").upper() == "FULL_STAY"
-        or (c.get("amount") is not None)
-        for c in cancellations
-    )
+        return False
+    for penalty in cancellations:
+        if str(penalty.get("type", "")).upper() == "FULL_STAY":
+            return False
+        amount = penalty.get("amount")
+        if amount is None:
+            return False
+        try:
+            value = Decimal(str(amount))
+            if not value.is_finite() or value != 0:
+                return False
+        except (ValueError, ArithmeticError):
+            return False
+    return True
 
 
 def _policy_text(offer: dict[str, Any]) -> str:
