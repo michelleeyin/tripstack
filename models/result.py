@@ -22,6 +22,8 @@ class PricingBreakdown:
     base_price: Decimal
     taxes: Decimal
     mandatory_fees: Decimal
+    # Price before any promotion: base + taxes + mandatory fees.
+    list_price: Decimal
     instant_discount: Decimal
     upfront_payment: Decimal
     cashback_eligible_spend: Decimal

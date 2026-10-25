@@ -149,18 +149,33 @@ def select_promotions(
     if not usable:
         return [], results, warnings
 
-    usable.sort(key=lambda pr: _benefit_estimate(pr[0], offer), reverse=True)
-    chosen: list[Promotion] = [usable[0][0]]
+    # Evaluate every admissible combination, not just the largest single offer.
+    # A lone $50 discount must lose to two stackable $30 discounts ($60);
+    # choosing greedily by individual size silently forfeits $10.
+    stackable = [(p, r) for p, r in usable if p.stackable]
+    candidates: list[tuple[list[Promotion], Decimal]] = [
+        ([p], _benefit_estimate(p, offer)) for p, _ in usable
+    ]
+    if len(stackable) > 1:
+        group = [p for p, _ in stackable]
+        total = sum((_benefit_estimate(p, offer) for p in group), ZERO)
+        candidates.append((group, total))
 
-    if usable[0][0].stackable:
-        for p, _ in usable[1:]:
-            if p.stackable:
-                chosen.append(p)
-    elif len(usable) > 1:
-        names = ", ".join(p.promotion_id for p, _ in usable[1:])
-        warnings.append(
-            f"'{usable[0][0].promotion_id}' cannot be combined with other offers; "
-            f"skipped {names}"
-        )
+    # Highest total benefit wins; ties go to the smaller set.
+    chosen, best_value = max(candidates, key=lambda c: (c[1], -len(c[0])))
+
+    chosen_ids = {p.promotion_id for p in chosen}
+    skipped = [p.promotion_id for p, _ in usable if p.promotion_id not in chosen_ids]
+    if skipped:
+        if len(chosen) == 1 and not chosen[0].stackable:
+            warnings.append(
+                f"'{chosen[0].promotion_id}' cannot be combined with other offers; "
+                f"skipped {', '.join(skipped)}"
+            )
+        else:
+            warnings.append(
+                f"Skipped {', '.join(skipped)}: they are worth less than the "
+                f"selected {best_value} total benefit"
+            )
 
     return chosen, results, warnings

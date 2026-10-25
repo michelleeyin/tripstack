@@ -85,11 +85,17 @@ def price_offer(
 
     instant_discount = ZERO
     cashback = ZERO
+    # Discounts that are confirmed enough to show, and the subset that is
+    # actually verified — the "certain" figure may only use the latter.
+    verified_instant = ZERO
+    verified_cashback = ZERO
     eligible_spend = to_money(offer.base_price)
+    list_price = to_money(offer.base_price + offer.taxes + offer.mandatory_fees)
 
     for promo in promotions:
         status = eligibility_status.get(promo.promotion_id, EligibilityStatus.ESTIMATED)
         counts = status in {EligibilityStatus.VERIFIED, EligibilityStatus.ESTIMATED}
+        verified = status == EligibilityStatus.VERIFIED
 
         if promo.type == "cashback":
             if not counts:
@@ -101,6 +107,8 @@ def price_offer(
             value, promo_warnings = compute_cashback(spend, promo)
             # Guard against stacking two cashback rules on the same spend.
             cashback = to_money(cashback + value)
+            if verified:
+                verified_cashback = to_money(verified_cashback + value)
             eligible_spend = max(eligible_spend, spend)
             warnings.extend(promo_warnings)
             if not promo.taxes_eligible:
@@ -109,9 +117,10 @@ def price_offer(
                 )
         else:
             if counts:
-                instant_discount = to_money(
-                    instant_discount + compute_instant_discount(offer, promo)
-                )
+                discount = compute_instant_discount(offer, promo)
+                instant_discount = to_money(instant_discount + discount)
+                if verified:
+                    verified_instant = to_money(verified_instant + discount)
             else:
                 warnings.append(
                     f"'{promo.promotion_id}' is not confirmed; discount not counted"
@@ -122,18 +131,15 @@ def price_offer(
     )
     net = to_money(max_zero(upfront - cashback))
 
-    # "Certain" cost ignores every non-verified benefit.
-    certain = upfront
-    for promo in promotions:
-        status = eligibility_status.get(promo.promotion_id, EligibilityStatus.ESTIMATED)
-        if status != EligibilityStatus.VERIFIED:
-            continue
-        if promo.type == "cashback":
-            spend = compute_cashback_eligible_spend(offer, promo)
-            value, _ = compute_cashback(spend, promo)
-            certain = to_money(max_zero(certain - value))
+    # "Certain" cost counts verified benefits only. It must start from the
+    # undiscounted price: an *estimated* instant discount lowers the upfront
+    # payment, but it must not lower the figure we call certain.
+    certain = to_money(
+        max_zero(list_price - verified_instant - verified_cashback)
+    )
 
     return PricingBreakdown(
+        list_price=list_price,
         base_price=offer.base_price,
         taxes=offer.taxes,
         mandatory_fees=offer.mandatory_fees,

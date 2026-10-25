@@ -10,7 +10,7 @@ from tripstack.engine.comparison import build_comparison_result, compare_offers
 from tripstack.engine.optimizer import optimize_trip
 from tripstack.providers import DemoProvider, search_sync
 
-from .helpers import TODAY, cashback, offer, trip_request
+from .helpers import TODAY, cashback, instant, offer, trip_request
 
 
 def test_ranks_cheapest_net_cost_first():
@@ -77,6 +77,21 @@ def test_budget_remaining_is_reported_on_both_bases():
     assert plan.remaining_budget == Decimal("225.00")
     assert plan.remaining_budget_net == Decimal("255.00")
     assert plan.remaining_budget_net - plan.remaining_budget == plan.total_cashback
+
+
+def test_baseline_is_measured_before_promotions():
+    """A $25 instant discount must show as $25 saved, not $0.
+
+    If the baseline were taken after the discount, baseline and net cost would
+    both be $75 and the report would claim no saving at all.
+    """
+    a = offer(base="100.00", taxes="0", fees="0")
+    promos = [instant(fixed="25.00", minimum_spend=None)]
+    plan = optimize_trip(trip_request(), [a], promos, today=TODAY)
+    assert plan.naive_baseline_total == Decimal("100.00")
+    assert plan.total_upfront == Decimal("75.00")
+    assert plan.total_net_cost == Decimal("75.00")
+    assert plan.estimated_savings == Decimal("25.00")
 
 
 def test_budget_breach_produces_a_warning():

@@ -161,21 +161,30 @@ Estimated Cashback  = min(Eligible Spend x Rate, Cap)
 Estimated Net Cost  = Upfront Payment - Estimated Cashback
 ```
 
-- All money is `Decimal`, quantized to cents — no floats.
+- Money is `Decimal` quantized to cents; **rates are not** — a rate keeps
+  full precision so 7.5% never becomes 8%.
 - Cashback never applies to taxes or fees unless the rule allows it.
 - Caps are enforced; a payment is never negative.
 - A promotion with **unknown** eligibility is never counted as a saving.
-- Non-stackable promotions are never summed.
+- Non-stackable promotions are never summed, and the selector compares the
+  *total* benefit of every admissible combination — two stackable $30 offers
+  beat a lone $50 offer.
+- "Certain" cost counts **verified** benefits only: an estimated instant
+  discount lowers the upfront payment but must not lower the certain figure.
 - Offers in a different currency are excluded, never silently converted.
 
 ### Baselines
 
-Savings are reported against two clearly defined baselines:
+Savings are reported against two clearly defined baselines, both measured
+**before promotions** (base + taxes + mandatory fees):
 
 | Baseline | Definition |
 |---|---|
-| Cheapest advertised | Cheapest upfront price per segment — what a "sort by price" shopper pays |
-| Average comparable | Mean upfront price of all comparable offers — reference only |
+| Cheapest advertised | Cheapest pre-promotion price per segment — what a "sort by price" shopper pays with no promotion |
+| Average comparable | Mean pre-promotion price of all comparable offers — reference only |
+
+Measuring the baseline after discounts would cancel them out: a booking that
+saves $25 would report "saved $0".
 
 ---
 

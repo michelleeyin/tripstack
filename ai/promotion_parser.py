@@ -17,7 +17,7 @@ from typing import Any
 from pydantic import BaseModel, ConfigDict, ValidationError, field_validator
 
 from ..config import get_settings
-from ..models.money import to_money
+from ..models.money import to_money, to_rate
 from ..models.promotion import Promotion
 from .gemma_client import GemmaClient, GemmaUnavailable
 from .prompts import build_prompt
@@ -256,7 +256,7 @@ def _draft_to_promotion(
 
     valid_until = _parse_date(draft.valid_until)
 
-    rate = to_money(draft.rate) if draft.rate is not None else None
+    rate = to_rate(draft.rate) if draft.rate is not None else None
     fixed = to_money(draft.fixed_amount) if draft.fixed_amount is not None else None
     if rate is None and fixed is None:
         # Nothing usable was extracted — never invent a benefit.

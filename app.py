@@ -328,6 +328,7 @@ with tab_compare:
                             "base_price": float(r.breakdown.base_price),
                             "taxes": float(r.breakdown.taxes),
                             "mandatory_fees": float(r.breakdown.mandatory_fees),
+                            "list_price": float(r.breakdown.list_price),
                             "instant_discount": float(r.breakdown.instant_discount),
                             "upfront_payment": float(r.upfront_payment),
                             "cashback_eligible_spend": float(
@@ -439,8 +440,8 @@ with tab_report:
 
         st.subheader("Disclosures")
         st.caption(
-            f"Conservative baseline: cheapest advertised upfront price per segment "
-            f"({fmt_money(plan.naive_baseline_total, cur)}). "
+            f"Conservative baseline: cheapest advertised price per segment before "
+            f"any promotion ({fmt_money(plan.naive_baseline_total, cur)}). "
             f"Reference baseline: average of all comparable offers "
             f"({fmt_money(plan.average_baseline_total, cur)}). "
             "Savings compare each baseline against the optimized net cost."

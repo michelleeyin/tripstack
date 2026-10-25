@@ -13,7 +13,7 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
-from .money import to_money
+from .money import to_money, to_rate
 
 VerificationStatus = Literal["verified", "estimated", "unknown"]
 PromotionType = Literal["cashback", "instant_discount", "coupon"]
@@ -45,12 +45,24 @@ class Promotion(BaseModel):
     excluded_categories: list[str] = Field(default_factory=list)
     notes: str = ""
 
-    @field_validator("rate", "fixed_amount", "cap", "minimum_spend", mode="before")
+    @field_validator("fixed_amount", "cap", "minimum_spend", mode="before")
     @classmethod
     def _coerce_money(cls, value: object) -> Decimal | None:
         if value is None or value == "":
             return None
         return to_money(value)
+
+    @field_validator("rate", mode="before")
+    @classmethod
+    def _coerce_rate(cls, value: object) -> Decimal | None:
+        """Rates are fractions, not money — never quantize them to cents.
+
+        ``to_money`` rounds to two decimals, which turns 0.075 (7.5%) into
+        0.08 (8%): a $1,000 booking would earn $80 instead of $75.
+        """
+        if value is None or value == "":
+            return None
+        return to_rate(value)
 
     @field_validator("rate")
     @classmethod

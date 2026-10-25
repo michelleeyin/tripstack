@@ -68,6 +68,28 @@ def test_stackable_promotions_combine():
     assert not any("cannot be combined" in w for w in warnings)
 
 
+def test_stackable_pair_beats_a_larger_single_discount():
+    """Two stackable $30 discounts ($60) must beat a lone $50 discount."""
+    promos = [
+        instant(promo_id="solo-50", fixed="50.00", minimum_spend=None, stackable=False),
+        instant(promo_id="stack-a", fixed="30.00", minimum_spend=None, stackable=True),
+        instant(promo_id="stack-b", fixed="30.00", minimum_spend=None, stackable=True),
+    ]
+    chosen, _, _ = select_promotions(offer(), promos, today=TODAY)
+    assert {p.promotion_id for p in chosen} == {"stack-a", "stack-b"}
+
+
+def test_best_single_discount_wins_when_stacking_is_worth_less():
+    promos = [
+        instant(promo_id="solo-50", fixed="50.00", minimum_spend=None, stackable=False),
+        instant(promo_id="stack-a", fixed="10.00", minimum_spend=None, stackable=True),
+        instant(promo_id="stack-b", fixed="10.00", minimum_spend=None, stackable=True),
+    ]
+    chosen, _, warnings = select_promotions(offer(), promos, today=TODAY)
+    assert [p.promotion_id for p in chosen] == ["solo-50"]
+    assert any("cannot be combined" in w for w in warnings)
+
+
 def test_wildcard_platform_matches_any_offer():
     promo = cashback(platform="*")
     result = evaluate_promotion(promo, offer(platform="Anything"), today=TODAY)

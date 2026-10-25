@@ -94,3 +94,42 @@ def test_fixed_amount_cashback_and_discount_types():
 def test_demo_offers_are_flagged_in_warnings():
     result = price_offer(offer(), [])
     assert any("demo data" in w for w in result.warnings)
+
+
+def test_rate_keeps_sub_cent_precision():
+    """7.5% must stay 7.5%: $1,000 earns $75.00, not $80.00."""
+    promo = cashback(rate="0.075", cap=None, minimum_spend=None)
+    assert promo.rate == Decimal("0.075")
+    value, _ = compute_cashback(Decimal("1000.00"), promo)
+    assert value == Decimal("75.00")
+
+    result = price_offer(
+        offer(base="1000.00", taxes="0", fees="0"),
+        [promo],
+        {promo.promotion_id: EligibilityStatus.ESTIMATED},
+    )
+    assert result.estimated_cashback == Decimal("75.00")
+    assert result.estimated_net_cost == Decimal("925.00")
+
+
+def test_estimated_instant_discount_does_not_lower_certain_cost():
+    """Upfront drops by the discount; the certain figure must not."""
+    promo = instant(fixed="25.00", minimum_spend=None)
+    result = price_offer(
+        offer(base="100.00", taxes="0", fees="0"),
+        [promo],
+        {promo.promotion_id: EligibilityStatus.ESTIMATED},
+    )
+    assert result.list_price == Decimal("100.00")
+    assert result.upfront_payment == Decimal("75.00")
+    assert result.guaranteed_net_cost == Decimal("100.00")
+
+
+def test_verified_instant_discount_does_lower_certain_cost():
+    promo = instant(fixed="25.00", minimum_spend=None)
+    result = price_offer(
+        offer(base="100.00", taxes="0", fees="0"),
+        [promo],
+        {promo.promotion_id: EligibilityStatus.VERIFIED},
+    )
+    assert result.guaranteed_net_cost == Decimal("75.00")

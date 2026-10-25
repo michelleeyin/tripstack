@@ -4,9 +4,14 @@ For each lodging segment: price every comparable offer, rank by the chosen
 objective, pick the winner. Then aggregate and compare against a clearly
 defined baseline.
 
-Baseline definition (naive booking): the cheapest *upfront* price in each
-segment, ignoring promotions entirely — i.e. what a traveller who only sorts
-by advertised price would pay. Savings = baseline - optimized net cost.
+Baseline definition (naive booking): the cheapest *pre-promotion* price in each
+segment (base + taxes + mandatory fees, before any discount or cashback) — i.e.
+what a traveller who only sorts by advertised price would pay if they used no
+promotion at all. Savings = baseline - optimized net cost.
+
+The baseline must be measured before promotions: comparing a discounted
+baseline against a discounted net cost cancels the discount out and reports
+"you saved $0" on a booking that actually saved $25.
 """
 
 from __future__ import annotations
@@ -70,9 +75,11 @@ def optimize_trip(
             ranked = rank_results(results, "lowest_certain")
 
         selected = ranked[0]
-        # Naive baseline: cheapest advertised upfront price in the segment.
-        naive = min(r.upfront_payment for r in ranked)
-        average = sum((r.upfront_payment for r in ranked), ZERO) / Decimal(len(ranked))
+        # Baselines are measured on the PRE-PROMOTION price. Comparing a
+        # discounted baseline against a discounted net cost cancels the
+        # discount out and reports "saved $0" on a booking that saved $25.
+        naive = min(r.breakdown.list_price for r in ranked)
+        average = sum((r.breakdown.list_price for r in ranked), ZERO) / Decimal(len(ranked))
 
         baseline = to_money(baseline + naive)
         average_baseline = to_money(average_baseline + average)
