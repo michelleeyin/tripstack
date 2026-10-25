@@ -150,6 +150,42 @@ def test_selection_uses_the_same_tax_basis_as_the_pricing_engine():
     assert breakdown.upfront_payment == Decimal("170.00")
 
 
+def test_equal_objective_scores_tie_break_on_net_cost_not_input_order():
+    """$100 room, mutually exclusive $10 and $50 cashback.
+
+    Under 'lowest upfront' both score $100 upfront. The tie must break towards
+    the cheaper net cost ($50), not towards whichever came first in the list.
+    """
+    def chosen_ids(order):
+        chosen, _, _ = select_promotions(
+            offer(base="100.00", taxes="0", fees="0"),
+            [cashback(promo_id=i, rate=r, cap=None, minimum_spend=None)
+             for i, r in order],
+            today=TODAY,
+            objective="lowest_upfront",
+        )
+        return [p.promotion_id for p in chosen]
+
+    forward = [("cb-10", "0.10"), ("cb-50", "0.50")]
+    reversed_ = list(reversed(forward))
+    assert chosen_ids(forward) == ["cb-50"]
+    assert chosen_ids(reversed_) == ["cb-50"]
+
+
+def test_equal_certain_scores_tie_break_on_net_cost():
+    promos = [
+        cashback(promo_id="cb-10", rate="0.10", cap=None, minimum_spend=None),
+        cashback(promo_id="cb-50", rate="0.50", cap=None, minimum_spend=None),
+    ]
+    chosen, _, _ = select_promotions(
+        offer(base="100.00", taxes="0", fees="0"),
+        promos,
+        today=TODAY,
+        objective="lowest_certain",
+    )
+    assert [p.promotion_id for p in chosen] == ["cb-50"]
+
+
 def test_wildcard_platform_matches_any_offer():
     promo = cashback(platform="*")
     result = evaluate_promotion(promo, offer(platform="Anything"), today=TODAY)

@@ -34,13 +34,17 @@ def compute_cashback_eligible_spend(offer: HotelOffer, promotion: Promotion) -> 
 def compute_instant_discount(offer: HotelOffer, promotion: Promotion) -> Decimal:
     """Upfront, point-of-sale reduction (coupons and instant discounts).
 
-    A percentage discount applies to the room rate only: taxes and fees are
-    charged on the discounted rate, not discounted themselves. ``taxes_eligible``
-    therefore affects cashback only, and a rule that sets it on a discount is
-    flagged rather than silently honoured.
+    A percentage discount is applied to the room rate only. Taxes and mandatory
+    fees are then added at their original, undiscounted amount — this engine
+    does not re-compute tax on the discounted rate, because it has no
+    jurisdiction-specific tax rules to do that with. The reported discount is
+    therefore never overstated.
+
+    ``taxes_eligible`` consequently affects cashback only; a rule that sets it
+    on a discount is flagged rather than silently honoured.
 
     Whatever this function returns is also what promotion selection compares,
-    so the two can never disagree again.
+    so the two can never disagree.
     """
     if promotion.type == "cashback":
         return ZERO
@@ -64,6 +68,26 @@ def score_for_objective(breakdown: PricingBreakdown, objective: str) -> Decimal:
     if objective == "lowest_certain":
         return breakdown.guaranteed_net_cost
     return breakdown.estimated_net_cost
+
+
+def sort_key_for_objective(
+    breakdown: PricingBreakdown, objective: str = "lowest_net"
+) -> tuple[Decimal, Decimal]:
+    """Full ordering: primary objective metric, then the tie-breaker.
+
+    Promotion selection and offer ranking both use this, so a tie on the
+    primary metric is always resolved the same way — by the cheaper net cost
+    (or the cheaper upfront payment when net cost *is* the objective). Without
+    a shared tie-break, two combinations that both score $100 could be picked
+    in input order, silently forfeiting $40 of cashback.
+    """
+    primary = score_for_objective(breakdown, objective)
+    secondary = (
+        breakdown.upfront_payment
+        if objective == "lowest_net"
+        else breakdown.estimated_net_cost
+    )
+    return (primary, secondary)
 
 
 def compute_cashback(

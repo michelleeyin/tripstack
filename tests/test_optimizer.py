@@ -113,6 +113,34 @@ def test_savings_are_measured_against_cheapest_advertised_baseline():
     assert plan.estimated_savings == Decimal("50.00")
 
 
+def test_comparison_table_and_trip_report_agree_on_promotions():
+    """The dashboard table and the report must show the same promotion set.
+
+    Regression: the table was built with the default objective while the plan
+    used the chosen one, so 'lowest upfront'/'lowest certain cost' showed two
+    different promotion sets and two different totals.
+    """
+    offers = [
+        offer(offer_id="a", platform="Provider A", base="500.00", taxes="50.00", fees="0"),
+        offer(offer_id="b", platform="Provider B", base="480.00", taxes="50.00", fees="0"),
+    ]
+    promos = [
+        cashback(platform="Provider A", rate="0.20", cap=None, minimum_spend=None),
+        instant(platform="Provider B", fixed="60.00", minimum_spend=None),
+    ]
+    for objective in ("lowest_net", "lowest_upfront", "lowest_certain"):
+        request = trip_request(objective=objective)
+        plan = optimize_trip(request, offers, promos, today=TODAY)
+        table, _ = compare_offers(offers, promos, today=TODAY, objective=objective)
+        by_id = {r.offer_id: r for r in table}
+        for choice in plan.choices:
+            chosen_ids = [p.promotion_id for p in choice.selected.applied_promotions]
+            table_ids = [
+                p.promotion_id for p in by_id[choice.selected.offer_id].applied_promotions
+            ]
+            assert chosen_ids == table_ids, f"{objective}: {chosen_ids} vs {table_ids}"
+
+
 def test_missing_segment_reports_a_warning_instead_of_crashing():
     request = trip_request(cities=("Chicago", "Atlanta"))
     plan = optimize_trip(request, [offer(city="Chicago")], [], today=TODAY)

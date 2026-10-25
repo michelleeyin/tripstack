@@ -9,7 +9,7 @@ from ..models.money import ZERO, fmt_money
 from ..models.promotion import Promotion
 from ..models.result import ComparisonResult
 from .eligibility import EligibilityStatus, select_promotions
-from .pricing import price_offer
+from .pricing import price_offer, sort_key_for_objective
 
 Objective = str  # "lowest_net" | "lowest_upfront" | "lowest_certain"
 
@@ -130,11 +130,13 @@ def compare_offers(
 
 
 def _sort_key(objective: Objective):
-    if objective == "lowest_upfront":
-        return lambda r: (r.upfront_payment, r.estimated_net_cost, r.offer_id)
-    if objective == "lowest_certain":
-        return lambda r: (r.guaranteed_net_cost, r.estimated_net_cost, r.offer_id)
-    return lambda r: (r.estimated_net_cost, r.upfront_payment, r.offer_id)
+    """Offer ordering: objective metric, shared tie-break, then a stable id.
+
+    The first two elements come from ``sort_key_for_objective``, the exact
+    function promotion selection uses — so ranking offers and choosing
+    promotions apply one rule, not two.
+    """
+    return lambda r: (*sort_key_for_objective(r.breakdown, objective), r.offer_id)
 
 
 def rank_results(

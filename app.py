@@ -99,8 +99,11 @@ def run_search(
         promos, traces = enrich_promotions(promos, use_ai=True, strategy=strategy)
         st.session_state.parse_traces = traces
 
+    # The objective must drive promotion selection here too, otherwise the
+    # comparison table shows one promotion set and the trip report another.
     results = [
-        build_comparison_result(o, promos) for o in offers
+        build_comparison_result(o, promos, objective=request.objective)
+        for o in offers
     ]
     plan = optimize_trip(request, offers, promos)
 
@@ -290,9 +293,18 @@ with tab_compare:
     else:
         f1, f2, f3 = st.columns(3)
         with f1:
+            sort_options = [
+                "Estimated net cost",
+                "Upfront payment",
+                "Guaranteed net cost",
+            ]
+            sort_default = {
+                "lowest_net": 0,
+                "lowest_upfront": 1,
+                "lowest_certain": 2,
+            }.get(st.session_state.request.objective, 0)
             st.session_state.f_sort = st.selectbox(
-                "Sort by",
-                ["Estimated net cost", "Upfront payment", "Guaranteed net cost"],
+                "Sort by", sort_options, index=sort_default
             )
         with f2:
             st.session_state.f_refundable = st.checkbox("Refundable only")

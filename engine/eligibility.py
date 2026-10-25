@@ -144,7 +144,7 @@ def select_promotions(
         return [], results, warnings
 
     # Local import: pricing imports this module, so this must not be top-level.
-    from .pricing import price_offer, score_for_objective
+    from .pricing import price_offer, score_for_objective, sort_key_for_objective
 
     status_map = {r.promotion_id: r.status for p, r in usable}
 
@@ -156,16 +156,20 @@ def select_promotions(
         candidate_sets.append(stackable)
 
     scored = [
-        (
-            combo,
-            score_for_objective(
-                price_offer(offer, combo, status_map), objective
-            ),
-        )
-        for combo in candidate_sets
+        (combo, price_offer(offer, combo, status_map)) for combo in candidate_sets
     ]
-    # Lowest objective score wins; ties go to the smaller set.
-    chosen, best_value = min(scored, key=lambda c: (c[1], len(c[0])))
+    # Identical ordering to offer ranking: objective metric, then the shared
+    # tie-break, then the smaller combination, then a stable id order. Without
+    # the tie-break two equal-scoring combinations were chosen by input order.
+    chosen, best = min(
+        scored,
+        key=lambda c: (
+            sort_key_for_objective(c[1], objective),
+            len(c[0]),
+            sorted(p.promotion_id for p in c[0]),
+        ),
+    )
+    best_value = score_for_objective(best, objective)
 
     chosen_ids = {p.promotion_id for p in chosen}
     skipped = [p.promotion_id for p, _ in usable if p.promotion_id not in chosen_ids]
