@@ -29,8 +29,10 @@ from tripstack.engine.comparison import build_comparison_result  # noqa: E402
 from tripstack.engine.optimizer import optimize_trip  # noqa: E402
 from tripstack.models.hotel import TripRequest, TripSegment  # noqa: E402
 from tripstack.models.money import fmt_money  # noqa: E402
+from tripstack.models.promotion import Promotion  # noqa: E402
 from tripstack.models.result import ComparisonResult, TripPlan  # noqa: E402
 from tripstack.providers import get_provider, search_sync  # noqa: E402
+from tripstack.ui_format import bill_rows, md, promo_line  # noqa: E402
 from tripstack.providers.base import ProviderError  # noqa: E402
 
 st.set_page_config(page_title="TripStack — Travel Savings Agent", layout="wide")
@@ -115,6 +117,8 @@ def run_search(
 
 def results_frame(results: list[ComparisonResult]) -> pd.DataFrame:
     return pd.DataFrame([r.to_row() for r in results])
+
+
 
 
 def apply_filters(results: list[ComparisonResult]) -> list[ComparisonResult]:
@@ -331,47 +335,74 @@ with tab_compare:
                 f"{fmt_money(r.estimated_net_cost, cur)} net"
             )
             with st.expander(label):
-                st.write(r.explanation)
+                st.write(md(r.explanation))
                 left, right = st.columns(2)
                 with left:
-                    st.markdown("**Cost breakdown**")
+                    st.markdown("**What you pay**")
+                    st.table(
+                        pd.DataFrame(
+                            bill_rows(r, cur), columns=["Item", "Amount"]
+                        ).set_index("Item")
+                    )
+                with right:
+                    st.markdown("**Applied promotions**")
+                    if r.applied_promotions:
+                        for p in r.applied_promotions:
+                            st.markdown(f"- {md(promo_line(p, cur))}")
+                    else:
+                        st.caption("No promotion matched this platform.")
+                    st.markdown("**Source**")
+                    if r.offer.is_simulated:
+                        st.caption(
+                            "Simulated demo data — not a live quote "
+                            f"(retrieved {r.offer.retrieved_at})"
+                        )
+                    else:
+                        st.caption(
+                            f"{r.offer.source_url} · retrieved {r.offer.retrieved_at}"
+                        )
+                if r.warnings:
+                    st.markdown("**Warnings**")
+                    for w in r.warnings:
+                        st.warning(w)
+                with st.expander("Technical details"):
                     st.json(
                         {
+                            "offer_id": r.offer.offer_id,
+                            "data_mode": r.offer.data_mode,
+                            "source_url": r.offer.source_url,
                             "base_price": float(r.breakdown.base_price),
                             "taxes": float(r.breakdown.taxes),
                             "mandatory_fees": float(r.breakdown.mandatory_fees),
                             "list_price": float(r.breakdown.list_price),
                             "instant_discount": float(r.breakdown.instant_discount),
                             "upfront_payment": float(r.upfront_payment),
-                            "cashback_eligible_spend": float(
-                                r.breakdown.cashback_eligible_spend
+                            "cashback_eligible_spend": (
+                                float(r.breakdown.cashback_eligible_spend)
+                                if r.estimated_cashback > 0
+                                else None
                             ),
                             "estimated_cashback": float(r.estimated_cashback),
                             "estimated_net_cost": float(r.estimated_net_cost),
                             "guaranteed_net_cost": float(r.guaranteed_net_cost),
+                            "applied_promotions": [
+                                {
+                                    "promotion_id": p.promotion_id,
+                                    "type": p.type,
+                                    "rate": float(p.rate) if p.rate is not None else None,
+                                    "fixed_amount": (
+                                        float(p.fixed_amount)
+                                        if p.fixed_amount is not None
+                                        else None
+                                    ),
+                                    "cap": float(p.cap) if p.cap is not None else None,
+                                    "verification_status": p.verification_status,
+                                    "stackable": p.stackable,
+                                }
+                                for p in r.applied_promotions
+                            ],
                         }
                     )
-                with right:
-                    st.markdown("**Applied promotions**")
-                    if r.applied_promotions:
-                        for p in r.applied_promotions:
-                            st.markdown(f"- `{p.promotion_id}` ({p.type})")
-                            st.caption(
-                                f"status={p.verification_status} · cap="
-                                f"{p.cap if p.cap is not None else '—'} · "
-                                f"stackable={p.stackable}"
-                            )
-                    else:
-                        st.caption("No promotion matched.")
-                    st.markdown("**Source**")
-                    st.caption(
-                        f"{r.offer.source_url} · retrieved "
-                        f"{r.offer.retrieved_at} · mode={r.offer.data_mode}"
-                    )
-                if r.warnings:
-                    st.markdown("**Warnings**")
-                    for w in r.warnings:
-                        st.warning(w)
 
 # ---- Page 3: Report ------------------------------------------------------
 with tab_report:
@@ -402,12 +433,14 @@ with tab_report:
             f"net basis {fmt_money(plan.remaining_budget_net, cur)}",
         )
         st.caption(
-            f"Budget {fmt_money(plan.budget, cur)} · paid upfront "
-            f"{fmt_money(plan.total_upfront, cur)} → "
-            f"**{fmt_money(plan.remaining_budget, cur)} left to spend today** · "
-            f"after estimated cashback "
-            f"{fmt_money(plan.remaining_budget_net, cur)} "
-            "(cashback is an estimate and arrives later, if at all)"
+            md(
+                f"Budget {fmt_money(plan.budget, cur)} · paid upfront "
+                f"{fmt_money(plan.total_upfront, cur)} → "
+                f"**{fmt_money(plan.remaining_budget, cur)} left to spend today** · "
+                f"after estimated cashback "
+                f"{fmt_money(plan.remaining_budget_net, cur)} "
+                "(cashback is an estimate and arrives later, if at all)"
+            )
         )
 
         if plan.over_budget:
@@ -423,22 +456,21 @@ with tab_report:
                 st.warning("No comparable offers for this segment.")
                 continue
             sel = choice.selected
-            st.write(sel.explanation)
+            st.write(md(sel.explanation))
             cols = st.columns(4)
             cols[0].markdown(f"**Hotel:** {sel.offer.hotel_name}")
             cols[1].markdown(f"**Channel:** {sel.offer.platform}")
             cols[2].markdown(
-                f"**Upfront:** {fmt_money(sel.upfront_payment, cur)} → "
-                f"**Net:** {fmt_money(sel.estimated_net_cost, cur)}"
+                md(
+                    f"**Upfront:** {fmt_money(sel.upfront_payment, cur)} → "
+                    f"**Net:** {fmt_money(sel.estimated_net_cost, cur)}"
+                )
             )
             cols[3].markdown(f"**Confidence:** {sel.confidence}")
             if sel.applied_promotions:
                 st.caption(
                     "Promotion: "
-                    + ", ".join(
-                        f"`{p.promotion_id}` ({p.source_url or 'no source'})"
-                        for p in sel.applied_promotions
-                    )
+                    + ", ".join(promo_line(p, cur) for p in sel.applied_promotions)
                 )
             for w in choice.warnings:
                 st.warning(w)
@@ -452,11 +484,13 @@ with tab_report:
 
         st.subheader("Disclosures")
         st.caption(
-            f"Conservative baseline: cheapest advertised price per segment before "
-            f"any promotion ({fmt_money(plan.naive_baseline_total, cur)}). "
-            f"Reference baseline: average of all comparable offers "
-            f"({fmt_money(plan.average_baseline_total, cur)}). "
-            "Savings compare each baseline against the optimized net cost."
+            md(
+                f"Conservative baseline: cheapest advertised price per segment before "
+                f"any promotion ({fmt_money(plan.naive_baseline_total, cur)}). "
+                f"Reference baseline: average of all comparable offers "
+                f"({fmt_money(plan.average_baseline_total, cur)}). "
+                "Savings compare each baseline against the optimized net cost."
+            )
         )
         st.caption(f"Provider: {st.session_state.provider_label}")
         if st.session_state.get("parse_traces"):
